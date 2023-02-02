@@ -29,6 +29,13 @@ class Simulation:
     def __init__(self, configuration, sim_dir_path):
         self.config = configuration
         # simulation_state.py stuff
+        """
+            Eric Note:
+            In the simulation_state.py file, ~line 316, initialize_state method
+            this is where the tasks are created
+            Seem to be added to a list that is a part of the SimulationState class
+            self.tasks aka here self.state.tasks
+        """
         self.state = SimulationState(configuration)
         self.sim_dir_path = sim_dir_path
 
@@ -66,6 +73,19 @@ class Simulation:
             logging.debug("\n(jump: {}, rr: {})".format(time_jump, reschedule_required))
 
             # Put new task arrivals in queues
+            """
+                Eric Note:
+                This is probably where I need to be able to push in my own tasks
+                
+                Effectively, breakwater can have a queue it presents to the server
+                The server will do a similar thing here, where it takes every task appropriately,
+                and distributes them randomly across the queues of the cores
+                
+                should it clear out the queue on every time step?
+                And then AQM happens on the queues locally? 
+                
+                Or should AQM happen on my main breakwater queue? Either way, it'll happen
+            """
             while task_number < self.state.tasks_scheduled and \
                     self.state.tasks[task_number].arrival_time <= self.state.timer.get_time():
 
@@ -88,6 +108,14 @@ class Simulation:
                     self.state.queues[source_core].enqueue(self.state.tasks[task_number], set_original=True)
 
                 else:
+                    """ 
+                        Eric Note: looks like tasks get flung to random queues in the system
+                        I think I remember this from the paper discussing how Caladan acts here
+                        I can probably place my own queue on top of this that distributes to these
+                        
+                        This is just grabbing the tasks in order, and stops placing them into queues if
+                        the timestamp exceeds the current simulated time
+                    """
                     chosen_queue = random.choice(self.state.available_queues)
                     self.state.queues[chosen_queue].enqueue(self.state.tasks[task_number], set_original=True)
 
@@ -154,7 +182,9 @@ class Simulation:
         self.state.add_final_stats()
 
     def choose_enqueue(self, num_choices):
-        """Choose a queue to place a new task on by current queueing delay."""
+        """Choose a queue to place a new task on by current queueing delay.
+            Note: this is only for enqueue choice
+        """
         if num_choices > len(self.state.available_queues):
             num_choices = len(self.state.available_queues)
         choices = random.sample(self.state.available_queues, num_choices)
@@ -194,6 +224,18 @@ class Simulation:
     def reallocate_threads_default(self):
         """Reallocate threads. Grants a core if there is a queue whose head has been around for longer than the
         reallocation timer."""
+        """
+            Eric Note:
+            This gets called by reallocate_threads, which itself gets called in the
+            main simulation while loop, around line 129, right after the tasks get
+            distributed
+            
+            But it seems like I could check the stats on the queues at any time really?
+            
+            Should probably add a self.state function for this queue past
+            threshold, but for Breakwater's targets instead. Although I guess
+            it would be more similar to delay range than this default actually
+        """
         if self.state.any_queue_past_delay_threshold():
             self.state.allocate_thread()
         else:

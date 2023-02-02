@@ -55,6 +55,34 @@ class SimulationState:
 
         self.config = config
 
+    """
+        Eric Note:
+        
+        Would want to add a function here for the max queue delay
+        should be very easy, the queues all track their current delay
+        
+        hmmmm wait this really only considers tasks. There's not really a nuanced difference 
+        between packet vs thread queues? I think? Does it matter? I mean
+        packets are different, they take a fixed amount of time to process, etc.
+        
+        Efficient scheulding paper: https://amyousterhout.com/papers/scheduling_policies_nsdi22.pdf
+        section 4.1 second paragraph: 
+                "Our overall model assumes that each core has a single local
+                queue (i.e., no distinction between packet and thread queues)
+                and that tasks arrive randomly at the queues of allocated
+                cores. This is representative of a NIC randomly steering tasks
+                to cores or of running threads randomly spawning an additional thread."
+        Might be an issue for later, for now, just consider thread queue delay I suppose
+        breakwater considers difference from current time and oldest timestamp in queue, 
+            I could look into what "current_delay" here is, and modify/create a different
+            method for breakwater if need be
+            Might need to modify queues to track oldest_timestamp as well
+            
+        Do I make separate tasks that come from the messaging overhead? receiver thread, sender thread
+        etc. messages get coalesced, piggybacking happens, etc..
+        Or should I assume perfect, no cost communication with breakwater clients for now?
+    """
+
     def any_queue_past_delay_threshold(self):
         """Returns true if any queue has a queueing delay longer than the reallocation interval."""
         return any([x.current_delay() > self.config.ALLOCATION_THRESHOLD for x in self.queues])
