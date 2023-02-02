@@ -28,6 +28,7 @@ class Simulation:
 
     def __init__(self, configuration, sim_dir_path):
         self.config = configuration
+        # simulation_state.py stuff
         self.state = SimulationState(configuration)
         self.sim_dir_path = sim_dir_path
 
