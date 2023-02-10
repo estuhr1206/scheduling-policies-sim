@@ -284,6 +284,7 @@ class SimulationState:
             if self.config.num_queues > 1 and not(self.threads[chosen_thread].queue.id in self.available_queues):
                 self.available_queues.append(self.threads[chosen_thread].queue.id)
         else:
+            # just sets state to allocate
             self.threads[chosen_thread].work_search_state.allocate()
             self.allocating_threads.append(chosen_thread)
 
