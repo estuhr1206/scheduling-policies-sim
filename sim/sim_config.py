@@ -72,7 +72,7 @@ class SimConfig:
 
         # breakwater constants
         self.RTT = 5000
-
+        self.NUM_CLIENTS = 1
 
         # normal constants
         self.AVERAGE_SERVICE_TIME = 1000

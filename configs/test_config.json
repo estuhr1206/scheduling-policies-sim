@@ -36,6 +36,7 @@
  30,
  31
 ],
+ "breakwater_enabled": true,
  "load_thread_count": 32,
  "num_tasks": null,
  "sim_duration": 100000000,
@@ -72,7 +73,8 @@
  "bimodal_service_time": false,
  "join_bounded_shortest_queue": false,
  "record_queue_lens": false,
- "RTT": 5000,
+ "RTT": 2000,
+ "NUM_CLIENTS": 4,
  "AVERAGE_SERVICE_TIME": 1000,
  "WORK_STEAL_CHECK_TIME": 100,
  "WORK_STEAL_TIME": 100,
