@@ -10,6 +10,8 @@ from work_search_state import WorkSearchState
 from tasks import EnqueuePenaltyTask, Task
 from sim_thread import Thread
 from sim_queue import Queue
+from breakwater_server import BreakwaterServer
+from breakwater_client import BreakwaterClient
 import progress_bar as progress
 
 
@@ -26,6 +28,10 @@ class SimulationState:
         self.available_queues = []
         self.allocating_threads = []
         self.main_queue = None
+
+        # breakwater variables
+        self.all_clients = []
+        self.breakwater_server = None
 
         # Global stats
         self.overall_steal_count = 0
@@ -348,6 +354,12 @@ class SimulationState:
             queue = self.queues[config.mapping[i]]
             self.threads.append(Thread(queue, i, config, self))
             queue.set_thread(i)
+
+        # initialize breakwater
+        if self.config.breakwater_enabled:
+            self.breakwater_server = BreakwaterServer(self.config.RTT)
+            for i in range(config.NUM_CLIENTS):
+                self.all_clients.append(BreakwaterClient(self))
 
         # Set siblings
         for i in range(config.num_threads):

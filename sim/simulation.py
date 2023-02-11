@@ -66,13 +66,17 @@ class Simulation:
             logging.debug("\n(jump: {}, rr: {})".format(time_jump, reschedule_required))
 
             # Put new task arrivals in queues
+            # may need to adjust timing/when sim ends, as of right now, it could end before
+            # the proper time (with credits, arrival time <= time arriving at server
             while task_number < self.state.tasks_scheduled and \
                     self.state.tasks[task_number].arrival_time <= self.state.timer.get_time():
 
                 if self.config.breakwater_enabled:
                     # enqueue tasks at breakwater clients
-
-                    pass
+                    chosen_client = random.choice(self.state.all_clients)
+                    self.state.all_clients[chosen_client].enqueue_task(self.state.tasks[task_number])
+                    # keep this set_original in mind when enqueuing from client -> core queues
+                    # self.state.queues[chosen_queue].enqueue(self.state.tasks[task_number], set_original=True)
                 else:
                     self.normal_task_distribution(task_number)
                 task_number += 1
