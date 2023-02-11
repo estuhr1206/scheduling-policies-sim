@@ -44,6 +44,7 @@ class Simulation:
 
         # Start at first time stamp with an arrival
         task_number = 0
+        # put inside if block, if breakwater_enabled == false
         self.state.timer.increment(self.state.tasks[0].arrival_time)
 
         allocation_number = 0
@@ -68,33 +69,12 @@ class Simulation:
             while task_number < self.state.tasks_scheduled and \
                     self.state.tasks[task_number].arrival_time <= self.state.timer.get_time():
 
-                if self.config.join_bounded_shortest_queue:
-                    chosen_queue = self.state.main_queue
-                    self.state.main_queue.enqueue(self.state.tasks[task_number], set_original=False)
+                if self.config.breakwater_enabled:
+                    # enqueue tasks at breakwater clients
 
-                elif self.config.enqueue_choice:
-                    chosen_queue = self.choose_enqueue(self.config.ENQUEUE_CHOICES)
-                    working_cores = self.state.currently_working_cores()
-                    if len(working_cores) == 0:
-                        self.state.tasks[task_number].source_core = self.state.queues[chosen_queue].get_core()
-                    else:
-                        self.state.tasks[task_number].source_core = random.choice(self.state.currently_working_cores())
-                    source_core = self.state.tasks[task_number].source_core
-                    if source_core != chosen_queue:
-                        self.state.threads[source_core].enqueue_penalty += 1
-                        self.state.queues[chosen_queue].awaiting_enqueue = True
-                        self.state.tasks[task_number].to_enqueue = chosen_queue
-                    self.state.queues[source_core].enqueue(self.state.tasks[task_number], set_original=True)
-
+                    pass
                 else:
-                    chosen_queue = random.choice(self.state.available_queues)
-                    self.state.queues[chosen_queue].enqueue(self.state.tasks[task_number], set_original=True)
-
-                if self.config.fred_reallocation and \
-                        self.state.threads[self.state.queues[chosen_queue].get_core()].is_busy():
-                    self.state.threads[self.state.queues[chosen_queue].get_core()].fred_preempt = True
-
-                logging.debug("[ARRIVAL]: {} onto queue {}".format(self.state.tasks[task_number], chosen_queue))
+                    self.normal_task_distribution(task_number)
                 task_number += 1
 
             # Reallocations
@@ -151,6 +131,34 @@ class Simulation:
 
         # When the simulation is complete, record final stats
         self.state.add_final_stats()
+
+    def normal_task_distribution(self, task_number):
+        if self.config.join_bounded_shortest_queue:
+            chosen_queue = self.state.main_queue
+            self.state.main_queue.enqueue(self.state.tasks[task_number], set_original=False)
+
+        elif self.config.enqueue_choice:
+            chosen_queue = self.choose_enqueue(self.config.ENQUEUE_CHOICES)
+            working_cores = self.state.currently_working_cores()
+            if len(working_cores) == 0:
+                self.state.tasks[task_number].source_core = self.state.queues[chosen_queue].get_core()
+            else:
+                self.state.tasks[task_number].source_core = random.choice(self.state.currently_working_cores())
+            source_core = self.state.tasks[task_number].source_core
+            if source_core != chosen_queue:
+                self.state.threads[source_core].enqueue_penalty += 1
+                self.state.queues[chosen_queue].awaiting_enqueue = True
+                self.state.tasks[task_number].to_enqueue = chosen_queue
+            self.state.queues[source_core].enqueue(self.state.tasks[task_number], set_original=True)
+
+        else:
+            chosen_queue = random.choice(self.state.available_queues)
+            self.state.queues[chosen_queue].enqueue(self.state.tasks[task_number], set_original=True)
+
+        if self.config.fred_reallocation and \
+                self.state.threads[self.state.queues[chosen_queue].get_core()].is_busy():
+            self.state.threads[self.state.queues[chosen_queue].get_core()].fred_preempt = True
+        logging.debug("[ARRIVAL]: {} onto queue {}".format(self.state.tasks[task_number], chosen_queue))
 
     def choose_enqueue(self, num_choices):
         """Choose a queue to place a new task on by current queueing delay."""
