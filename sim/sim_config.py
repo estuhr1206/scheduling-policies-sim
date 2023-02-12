@@ -73,7 +73,7 @@ class SimConfig:
         # breakwater constants
         self.RTT = 5000
         self.NUM_CLIENTS = 1
-        self.BREAKWATER_TARGET_DELAY = 4000
+        self.BREAKWATER_TARGET_DELAY = 5000
         self.BREAKWATER_AGGRESSIVENESS_ALPHA = 0.001
         self.BREAKWATER_BETA = 0.02
 

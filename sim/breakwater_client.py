@@ -3,6 +3,7 @@
 
 import math
 from collections import deque
+import random
 
 # likely initialize clients in simulation_state.py, (similar to things like the sim_queues)
 # list of them can be accessed in main simulation (and thereby breakwater_server, would it work as a param?)
@@ -47,14 +48,23 @@ class BreakwaterClient:
             # aqm can happen here, simply don't enqueue it at a core if delay is high
             self.state.breakwater_server.credits_issued -= 1
             self.credits -= 1
-            # check for aqm, if aqm, some stat for request got dropped
-            # enqueue at core
-
+            current_task = self.queue.popleft()
             self.current_demand -= 1
+
+            # check for aqm, if aqm, add some stat for request got dropped
+            # breakwater paper: "AQM threshold to 2 · dt (e.g., dt = 80 μs and AQM threshold = 160 μs)"
+            if not self.state.breakwater_server.max_delay > 2 * self.state.config.BREAKWATER_TARGET_DELAY:
+                # need to override arrival time for core usage
+                # this is ok, because the arrival time usage for enqueuing at clients occurs before this
+                # override here
+                current_task.arrival_time = self.state.timer.get_time()
+                # enqueue at core
+                chosen_queue = random.choice(self.state.available_queues)
+                self.state.queues[chosen_queue].enqueue(current_task, set_original=True)
+
             # may have just finished our last task
             if self.current_demand <= 0:
                 self.state.breakwater_server.client_deregister(self)
-
 
     def add_credit(self):
         self.credits += 1

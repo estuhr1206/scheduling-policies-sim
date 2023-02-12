@@ -17,9 +17,10 @@ class BreakwaterServer:
         self.AGGRESSIVENESS_ALPHA = ALPHA
         self.BETA = BETA
         self.overcommitment_credits = 0
+        self.max_delay = 0
 
     def control_loop(self, max_delay=0):
-
+        self.max_delay = max_delay
         # total credit pool
         uppercase_alpha = max(int(self.AGGRESSIVENESS_ALPHA * self.num_clients), 1)
 
@@ -29,32 +30,51 @@ class BreakwaterServer:
             reduction = max(1.0 - self.BETA*((max_delay - self.target_delay)/self.target_delay), 0.5)
             self.total_credits = self.total_credits * reduction
 
+        credits_to_send = self.total_credits - self.credits_issued
+        self.send_credits(credits_to_send)
+
         # overcommitment
-        total_minus_issued = self.total_credits - self.credits_issued
-        self.overcommitment_credits = max(int(total_minus_issued / self.num_clients), 1)
+        # I believe this is a misunderstanding of how overcommitment works
+        # overcommitment is a per client thing allowing a client to have more
+        # than its demand. This does not mean we issue more credits than
+        # cTotal
+        #
+        # total_minus_issued = self.total_credits - self.credits_issued
+        # self.overcommitment_credits = max(int(total_minus_issued / self.num_clients), 1)
 
         # per client
         # random distribution for now, so no demand tracking of clients
-        total_overcommitment = self.overcommitment_credits * self.num_clients
-        pool_plus_overcommitment = total_overcommitment + self.total_credits
-
-        credits_to_send = pool_plus_overcommitment - self.credits_issued
-        self.send_credits(credits_to_send)
-
-
-
-
-
-
+        # total_overcommitment = self.overcommitment_credits * self.num_clients
+        # pool_plus_overcommitment = total_overcommitment + self.total_credits
 
     def send_credits(self, credits_to_send):
         if credits_to_send > 0:
-            potential_clients = []
-            for client in self.clients:
-                if client.current_demand > 0:
-                    potential_clients.append(client)
-            for client in potential_clients:
-                client.credits += 1
+
+            # idea 1: doesn't scale
+            # potential_clients = []
+            # for client in self.clients:
+            #     if client.current_demand > 0:
+            #         potential_clients.append(client)
+            # for i in range(credits_to_send):
+            #     chosen_client = random.choice(potential_clients)
+            #     chosen_client.credits += 1
+            #     self.credits_issued += 1
+
+            # idea 2 might loop forever
+            # i = 0
+            # while i < credits_to_send:
+            #     chosen_client = random.choice(self.clients)
+            #     if chosen_client.current_demand > 0:
+            #         chosen_client.credits += 1
+            #         self.credits_issued += 1
+            #         i += 1
+            #     else:
+            #         continue
+
+            # idea 3, just give out credits regardless of demand?
+            for i in range(credits_to_send):
+                chosen_client = random.choice(self.clients)
+                chosen_client.add_credit()
                 self.credits_issued += 1
 
         elif credits_to_send < 0:
@@ -89,7 +109,7 @@ class BreakwaterServer:
 
     def client_deregister(self, client):
         # credits yielded by client
-        self.credits_issued += client.credits
+        self.credits_issued -= client.credits
 
         client.registered = False
         client.credits = 0

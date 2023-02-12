@@ -1,7 +1,7 @@
 {
  "avg_system_load": 0.5,
- "num_queues": 32,
- "num_threads": 32,
+ "num_queues": 2,
+ "num_threads": 2,
  "mapping": [
  0,
  1,
@@ -37,7 +37,7 @@
  31
 ],
  "breakwater_enabled": true,
- "load_thread_count": 32,
+ "load_thread_count": 2,
  "num_tasks": null,
  "sim_duration": 100000000,
  "locking_enabled": false,
@@ -74,8 +74,8 @@
  "join_bounded_shortest_queue": false,
  "record_queue_lens": false,
  "RTT": 2000,
- "NUM_CLIENTS": 4,
- "BREAKWATER_TARGET_DELAY": 4000,
+ "NUM_CLIENTS": 1,
+ "BREAKWATER_TARGET_DELAY": 5000,
  "BREAKWATER_AGGRESSIVENESS_ALPHA": 0.001,
  "BREAKWATER_BETA": 0.02,
  "AVERAGE_SERVICE_TIME": 1000,
