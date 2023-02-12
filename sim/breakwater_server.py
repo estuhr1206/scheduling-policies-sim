@@ -31,7 +31,8 @@ class BreakwaterServer:
             self.total_credits = self.total_credits * reduction
 
         credits_to_send = self.total_credits - self.credits_issued
-        self.send_credits(credits_to_send)
+        if self.num_clients > 0:
+            self.send_credits(credits_to_send)
 
         # overcommitment
         # I believe this is a misunderstanding of how overcommitment works
@@ -114,6 +115,7 @@ class BreakwaterServer:
         client.registered = False
         client.credits = 0
         self.clients.remove(client)
+        self.num_clients -= 1
 
 
 

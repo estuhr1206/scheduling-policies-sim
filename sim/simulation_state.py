@@ -61,6 +61,16 @@ class SimulationState:
 
         self.config = config
 
+    def max_queue_delay(self):
+        """Returns the max delay across queues in the system, used in breakwater credit pool calculations/AQM"""
+        # could do a simpler max or something, but because we're calling upon each queue, looping seems necessary
+        temp_max = -1
+        for x in self.queues:
+            temp_current_delay = x.current_delay()
+            if temp_current_delay > temp_max:
+                temp_max = temp_current_delay
+        return temp_max
+
     def any_queue_past_delay_threshold(self):
         """Returns true if any queue has a queueing delay longer than the reallocation interval."""
         return any([x.current_delay() > self.config.ALLOCATION_THRESHOLD for x in self.queues])

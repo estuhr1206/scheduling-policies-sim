@@ -81,6 +81,11 @@ class Simulation:
                     self.normal_task_distribution(task_number)
                 task_number += 1
 
+            # breakwater
+            if self.config.breakwater_enabled and self.state.timer.get_time() % self.config.RTT == 0:
+                max_delay = self.state.max_queue_delay()
+                self.state.breakwater_server.control_loop(max_delay)
+
             # Reallocations
             # Continuously check for reallocations
             if self.config.parking_enabled and self.config.always_check_realloc and\
