@@ -40,10 +40,21 @@ class BreakwaterClient:
 
     def spend_credits(self):
 
-        pass
+        # upon no demand
+        if self.current_demand <= 0:
+            self.state.breakwater_server.client_deregister(self)
+        else:
+            # aqm can happen here, simply don't enqueue it at a core if delay is high
+            self.state.breakwater_server.credits_issued -= 1
+            self.credits -= 1
+            # check for aqm, if aqm, some stat for request got dropped
+            # enqueue at core
 
-    def deregister_with_server(self):
-        pass
+            self.current_demand -= 1
+            # may have just finished our last task
+            if self.current_demand <= 0:
+                self.state.breakwater_server.client_deregister(self)
+
 
     def add_credit(self):
         self.credits += 1

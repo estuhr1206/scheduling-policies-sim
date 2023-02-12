@@ -44,7 +44,7 @@ class Simulation:
 
         # Start at first time stamp with an arrival
         task_number = 0
-        # put inside if block, if breakwater_enabled == false
+        # TODO put inside if block, if breakwater_enabled == false
         self.state.timer.increment(self.state.tasks[0].arrival_time)
 
         allocation_number = 0
