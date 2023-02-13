@@ -5,8 +5,8 @@ import math
 from collections import deque
 import random
 
-# likely initialize clients in simulation_state.py, (similar to things like the sim_queues)
-# list of them can be accessed in main simulation (and thereby breakwater_server, would it work as a param?)
+# clients are initialized in simulation_state.py, (similar to items like the sim_queues)
+# list of them can be accessed in main simulation, from sim.state
 
 
 class BreakwaterClient:
@@ -43,17 +43,18 @@ class BreakwaterClient:
 
         # upon no demand
         if self.current_demand <= 0:
-            self.state.breakwater_server.client_deregister(self)
+            self.deregister()
         else:
             # aqm can happen here, simply don't enqueue it at a core if delay is high
             self.state.breakwater_server.credits_issued -= 1
             self.credits -= 1
+            # TODO drop if SLO exceeded
             current_task = self.queue.popleft()
             self.current_demand -= 1
 
             # check for aqm, if aqm, add some stat for request got dropped
             # breakwater paper: "AQM threshold to 2 · dt (e.g., dt = 80 μs and AQM threshold = 160 μs)"
-            if not self.state.breakwater_server.max_delay > 2 * self.state.config.BREAKWATER_TARGET_DELAY:
+            if self.state.breakwater_server.max_delay <= 2 * self.state.config.BREAKWATER_TARGET_DELAY:
                 # need to override arrival time for core usage
                 # this is ok, because the arrival time usage for enqueuing at clients occurs before this
                 # override here
@@ -64,10 +65,20 @@ class BreakwaterClient:
 
             # may have just finished our last task
             if self.current_demand <= 0:
-                self.state.breakwater_server.client_deregister(self)
+                self.deregister()
 
     def add_credit(self):
         self.credits += 1
         # should call spend credits
         self.spend_credits()
+        # TODO is multiple credit spending necessary?
+        # clients attempt to spend credits upon a task enqueue or receiving credit
+        # should not be in a situation where all possible spending is not performed
+
+    def deregister(self):
+        # import this call to server is first, as it will take back credits the client currently has
+        self.state.breakwater_server.client_deregister(self)
+        self.registered = False
+        self.credits = 0
+
 

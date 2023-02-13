@@ -28,7 +28,7 @@ class BreakwaterServer:
             self.total_credits += uppercase_alpha
         else:
             reduction = max(1.0 - self.BETA*((max_delay - self.target_delay)/self.target_delay), 0.5)
-            self.total_credits = self.total_credits * reduction
+            self.total_credits *= reduction
 
         credits_to_send = self.total_credits - self.credits_issued
         if self.num_clients > 0:
@@ -52,31 +52,31 @@ class BreakwaterServer:
         if credits_to_send > 0:
 
             # idea 1: doesn't scale
-            # potential_clients = []
-            # for client in self.clients:
-            #     if client.current_demand > 0:
-            #         potential_clients.append(client)
-            # for i in range(credits_to_send):
-            #     chosen_client = random.choice(potential_clients)
-            #     chosen_client.credits += 1
-            #     self.credits_issued += 1
+            potential_clients = []
+            for client in self.clients:
+                if client.current_demand > 0:
+                    potential_clients.append(client)
+            for i in range(credits_to_send):
+                chosen_client = random.choice(potential_clients)
+                chosen_client.add_credit()
+                self.credits_issued += 1
 
             # idea 2 might loop forever
             # i = 0
             # while i < credits_to_send:
             #     chosen_client = random.choice(self.clients)
             #     if chosen_client.current_demand > 0:
-            #         chosen_client.credits += 1
+            #         chosen_client.add_credit()
             #         self.credits_issued += 1
             #         i += 1
             #     else:
             #         continue
 
             # idea 3, just give out credits regardless of demand?
-            for i in range(credits_to_send):
-                chosen_client = random.choice(self.clients)
-                chosen_client.add_credit()
-                self.credits_issued += 1
+            # for i in range(credits_to_send):
+            #     chosen_client = random.choice(self.clients)
+            #     chosen_client.add_credit()
+            #     self.credits_issued += 1
 
         elif credits_to_send < 0:
             """
@@ -98,22 +98,19 @@ class BreakwaterServer:
         self.clients.append(client)
         self.num_clients += 1
         """
-            I don't think this should distribute credits? 
             credit distribution should not be instantaneous, even if there were credits to grant
             to this client.
 
             It should happen when the control loop runs, every RTT. 
             normally, credits could be sent on the register response, but we don't really have a concept of this here
 
-            the next RTT truly is the soonest that response could arrive regardless, so this should track
+            the next RTT truly is the soonest that response could arrive regardless
         """
 
     def client_deregister(self, client):
         # credits yielded by client
         self.credits_issued -= client.credits
 
-        client.registered = False
-        client.credits = 0
         self.clients.remove(client)
         self.num_clients -= 1
 
