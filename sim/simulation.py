@@ -322,6 +322,7 @@ class Simulation:
         """Mimicking the find next alloc code, as breakwater runs its control loop every RTT, similar
         to how reallocations happen every CORE_REALLOCATION_TIMER
         """
+        # TODO I feel like this calculation doesn't make sense.
         next_control_loop = (math.floor(self.state.timer.get_time() / self.config.RTT) + 1) * self.config.RTT
         return next_control_loop
 
