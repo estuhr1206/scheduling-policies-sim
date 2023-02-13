@@ -28,11 +28,11 @@ class BreakwaterServer:
             self.total_credits += uppercase_alpha
         else:
             reduction = max(1.0 - self.BETA*((max_delay - self.target_delay)/self.target_delay), 0.5)
-            self.total_credits *= reduction
+            self.total_credits = int(self.total_credits * reduction)
 
         credits_to_send = self.total_credits - self.credits_issued
         if self.num_clients > 0:
-            self.send_credits(credits_to_send)
+            self.send_credits(int(credits_to_send))
 
         # overcommitment
         # I believe this is a misunderstanding of how overcommitment works
@@ -50,18 +50,33 @@ class BreakwaterServer:
 
     def send_credits(self, credits_to_send):
         if credits_to_send > 0:
+            
+            # idea 1: modified idea 3. Might still loop forever? but hopefully client 
+            # would simply deregister without fail once it has 0 demand
+            i = 0
+            while i < credits_to_send:
+                if self.num_clients <= 0:
+                    break
+                chosen_client = random.choice(self.clients)
+                if chosen_client.current_demand > 0:
+                    chosen_client.add_credit()
+                    self.credits_issued += 1
+                    i += 1
+                else:
+                    continue
+                
 
-            # idea 1: doesn't scale
-            potential_clients = []
-            for client in self.clients:
-                if client.current_demand > 0:
-                    potential_clients.append(client)
-            for i in range(credits_to_send):
-                chosen_client = random.choice(potential_clients)
-                chosen_client.add_credit()
-                self.credits_issued += 1
+            # idea 2: doesn't scale
+            # potential_clients = []
+            # for client in self.clients:
+            #     if client.current_demand > 0:
+            #         potential_clients.append(client)
+            # for i in range(credits_to_send):
+            #     chosen_client = random.choice(potential_clients)
+            #     chosen_client.add_credit()
+            #     self.credits_issued += 1
 
-            # idea 2 might loop forever
+            # idea 3 might loop forever
             # i = 0
             # while i < credits_to_send:
             #     chosen_client = random.choice(self.clients)
@@ -72,7 +87,7 @@ class BreakwaterServer:
             #     else:
             #         continue
 
-            # idea 3, just give out credits regardless of demand?
+            # idea 4, just give out credits regardless of demand?
             # for i in range(credits_to_send):
             #     chosen_client = random.choice(self.clients)
             #     chosen_client.add_credit()

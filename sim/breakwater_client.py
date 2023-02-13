@@ -76,7 +76,7 @@ class BreakwaterClient:
         # should not be in a situation where all possible spending is not performed
 
     def deregister(self):
-        # import this call to server is first, as it will take back credits the client currently has
+        # important that this call to server is first, as it will take back credits the client currently has
         self.state.breakwater_server.client_deregister(self)
         self.registered = False
         self.credits = 0

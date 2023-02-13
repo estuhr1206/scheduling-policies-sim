@@ -44,6 +44,7 @@ class Simulation:
 
         # Start at first time stamp with an arrival
         task_number = 0
+        # TODO I think this may be fine even with breakwater
         if not self.config.breakwater_enabled:
             self.state.timer.increment(self.state.tasks[0].arrival_time)
 
@@ -62,8 +63,7 @@ class Simulation:
                 next_arrival, next_alloc = self.find_next_arrival_and_alloc(task_number, allocation_number)
                 time_jump, reschedule_required = self.find_time_jump(next_arrival, next_alloc,
                                                                      immediate_reschedule=reschedule_required)
-
-            logging.debug("\n(jump: {}, rr: {})".format(time_jump, reschedule_required))
+                logging.debug("\n(jump: {}, rr: {})".format(time_jump, reschedule_required))
 
             # Put new task arrivals in queues
             # may need to adjust timing/when sim ends, as of right now, it could end before
@@ -74,7 +74,7 @@ class Simulation:
                 if self.config.breakwater_enabled:
                     # enqueue tasks at breakwater clients
                     chosen_client = random.choice(self.state.all_clients)
-                    self.state.all_clients[chosen_client].enqueue_task(self.state.tasks[task_number])
+                    chosen_client.enqueue_task(self.state.tasks[task_number])
                     # keep this set_original in mind when enqueuing from client -> core queues
                     # self.state.queues[chosen_queue].enqueue(self.state.tasks[task_number], set_original=True)
                 else:
