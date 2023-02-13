@@ -44,9 +44,9 @@ class Simulation:
 
         # Start at first time stamp with an arrival
         task_number = 0
-        # TODO I think this may be fine even with breakwater
-        if not self.config.breakwater_enabled:
-            self.state.timer.increment(self.state.tasks[0].arrival_time)
+        # TODO check that this is fine, even with breakwater
+        # if not self.config.breakwater_enabled:
+        self.state.timer.increment(self.state.tasks[0].arrival_time)
 
         allocation_number = 0
         reschedule_required = False
@@ -318,6 +318,13 @@ class Simulation:
 
         return choice
 
+    def find_next_breakwater_control_loop(self):
+        """Mimicking the find next alloc code, as breakwater runs its control loop every RTT, similar
+        to how reallocations happen every CORE_REALLOCATION_TIMER
+        """
+        next_control_loop = (math.floor(self.state.timer.get_time() / self.config.RTT) + 1) * self.config.RTT
+        return next_control_loop
+
     def find_next_arrival_and_alloc(self, task_number, allocation_number):
         """Determine the next task arrival and allocation decision.
         :param task_number: Current index into tasks that have arrived.
@@ -389,7 +396,19 @@ class Simulation:
         next_completion_time = min(completion_times) if len(completion_times) > 0 else None
 
         # Find the next event of any type
+
         upcoming_events = [next_arrival, next_completion_time, next_allocation]
+        if self.config.breakwater_enabled:
+            """
+                should be acceptable for breakwater
+                server only acts every RTT
+                clients only act upon: enqueued tasks or credits from server
+                
+                next_arrival is checked here already, so this should cover all cases
+                in which breakwater would have any actions to perform
+            """
+            next_breakwater = self.find_next_breakwater_control_loop()
+            upcoming_events.append(next_breakwater)
         if not any(upcoming_events):
             next_event = self.state.timer.get_time() + 1
         else:

@@ -13,7 +13,7 @@
  "locking_enabled": false,
  "work_stealing_enabled": true,
  "parking_enabled": true,
- "fast_forward_enabled": false,
+ "fast_forward_enabled": true,
  "record_allocations": false,
  "reallocation_record": null,
  "reallocation_replay": false,
