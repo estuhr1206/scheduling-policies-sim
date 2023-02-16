@@ -34,6 +34,9 @@ class BreakwaterClient:
         # should call spend_credits
         if self.credits > 0:
             self.spend_credits()
+        else:
+            # print out that something is wrong
+            print("error, credits < 0")
 
     # can instead call the server's register function
     # def register_with_server(self):
@@ -43,7 +46,11 @@ class BreakwaterClient:
 
         # upon no demand
         if self.current_demand <= 0:
-            self.deregister()
+            # TODO do nothing, don't deregister for debugging
+            # self.deregister()
+            # if < 0, something is wrong.
+            if self.current_demand < 0:
+                print("error, demand was below 0")
         else:
             # aqm can happen here, simply don't enqueue it at a core if delay is high
             self.state.breakwater_server.credits_issued -= 1
@@ -62,10 +69,13 @@ class BreakwaterClient:
                 # enqueue at core
                 chosen_queue = random.choice(self.state.available_queues)
                 self.state.queues[chosen_queue].enqueue(current_task, set_original=True)
+            else:
+                # shouldn't be dropped if load is low (aka the 50%)
+                print("error, tasked dropped (disregard if operating at/near capacity)")
 
             # may have just finished our last task
-            if self.current_demand <= 0:
-                self.deregister()
+            #if self.current_demand <= 0:
+                # self.deregister()
 
     def add_credit(self):
         self.credits += 1
@@ -74,7 +84,7 @@ class BreakwaterClient:
         # TODO is multiple credit spending necessary?
         # clients attempt to spend credits upon a task enqueue or receiving credit
         # should not be in a situation where all possible spending is not performed
-
+    # simplify debugging, don't deregister
     def deregister(self):
         # important that this call to server is first, as it will take back credits the client currently has
         self.state.breakwater_server.client_deregister(self)

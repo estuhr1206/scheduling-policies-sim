@@ -54,16 +54,16 @@ class BreakwaterServer:
             # idea 1: modified idea 3. Might still loop forever? but hopefully client 
             # would simply deregister without fail once it has 0 demand
             i = 0
-            while i < credits_to_send:
-                if self.num_clients <= 0:
-                    break
-                chosen_client = random.choice(self.clients)
-                if chosen_client.current_demand > 0:
-                    chosen_client.add_credit()
-                    self.credits_issued += 1
-                    i += 1
-                else:
-                    continue
+            # while i < credits_to_send:
+            #     if self.num_clients <= 0:
+            #         break
+            #     chosen_client = random.choice(self.clients)
+            #     if chosen_client.current_demand > 0:
+            #         chosen_client.add_credit()
+            #         self.credits_issued += 1
+            #         i += 1
+            #     else:
+            #         continue
                 
 
             # idea 2: doesn't scale
@@ -88,10 +88,12 @@ class BreakwaterServer:
             #         continue
 
             # idea 4, just give out credits regardless of demand?
-            # for i in range(credits_to_send):
-            #     chosen_client = random.choice(self.clients)
-            #     chosen_client.add_credit()
-            #     self.credits_issued += 1
+            # TODO using this for debugging, because clients can't deregister right now
+            # single client regardless
+            for i in range(credits_to_send):
+                chosen_client = random.choice(self.clients)
+                chosen_client.add_credit()
+                self.credits_issued += 1
 
         elif credits_to_send < 0:
             """

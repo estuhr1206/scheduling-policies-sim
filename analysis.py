@@ -94,6 +94,11 @@ def analyze_sim_run(run_name, output_file, print_results=False, time_dropped=0):
     next(task_file) # skip first line
     for line in task_file:
         data = line.split(",")
+        """
+            end time is a get_time() call at the very end of the sim run
+            I believe data[0] here refers to task arrival time, and data[1] refers
+            to "time in system" which is completion time - arrival time
+        """
         if int(data[0]) > time_dropped * stats["End Time"] and int(data[1]) >= 0:
             total_tasks += 1
             task_latencies.append(int(data[1]))
