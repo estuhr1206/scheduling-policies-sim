@@ -34,14 +34,7 @@ class BreakwaterServer:
         if self.num_clients > 0:
             self.send_credits(int(credits_to_send))
 
-        # overcommitment
-        # I believe this is a misunderstanding of how overcommitment works
-        # overcommitment is a per client thing allowing a client to have more
-        # than its demand. This does not mean we issue more credits than
-        # cTotal
-        #
-        # total_minus_issued = self.total_credits - self.credits_issued
-        # self.overcommitment_credits = max(int(total_minus_issued / self.num_clients), 1)
+        self.overcommitment_credits = max(int(credits_to_send / self.num_clients), 1)
 
         # per client
         # random distribution for now, so no demand tracking of clients
@@ -51,7 +44,7 @@ class BreakwaterServer:
     def send_credits(self, credits_to_send):
         if credits_to_send > 0:
             
-            # idea 1: modified idea 3. Might still loop forever? but hopefully client 
+            # idea 1: Might loop forever? but hopefully client
             # would simply deregister without fail once it has 0 demand
             i = 0
             # while i < credits_to_send:
@@ -71,29 +64,19 @@ class BreakwaterServer:
             # for client in self.clients:
             #     if client.current_demand > 0:
             #         potential_clients.append(client)
-            # for i in range(credits_to_send):
-            #     chosen_client = random.choice(potential_clients)
-            #     chosen_client.add_credit()
-            #     self.credits_issued += 1
-
-            # idea 3 might loop forever
-            # i = 0
-            # while i < credits_to_send:
-            #     chosen_client = random.choice(self.clients)
-            #     if chosen_client.current_demand > 0:
+            # if len(potential_clients) > 0:
+            #     for i in range(credits_to_send):
+            #         chosen_client = random.choice(potential_clients)
             #         chosen_client.add_credit()
             #         self.credits_issued += 1
-            #         i += 1
-            #     else:
-            #         continue
 
-            # idea 4, just give out credits regardless of demand?
-            # TODO using this for debugging, because clients can't deregister right now
-            # single client regardless
+            # idea 3, just give out credits regardless of demand?
             for i in range(credits_to_send):
                 chosen_client = random.choice(self.clients)
                 chosen_client.add_credit()
                 self.credits_issued += 1
+            # TODO using this for debugging, because clients can't deregister right now
+            # single client regardless
 
         elif credits_to_send < 0:
             """
