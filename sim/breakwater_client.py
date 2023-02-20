@@ -71,16 +71,17 @@ class BreakwaterClient:
                 self.state.queues[chosen_queue].enqueue(current_task, set_original=True)
             else:
                 # shouldn't be dropped if load is low (aka the 50%)
-                
-                breakwater = self.state.breakwater_server
-                print("dumping info for debugging")
-                print("breakwater: credit pool: {0}, credits issued: {1}".format(breakwater.total_credits, breakwater.credits_issued))
+                # TODO can be put back in, will cause issues for varycores run
+                pass
+                # breakwater = self.state.breakwater_server
+                # print("dumping info for debugging")
+                # print("breakwater: credit pool: {0}, credits issued: {1}".format(breakwater.total_credits, breakwater.credits_issued))
 
-                print("queue lengths and delays")
-                for q in self.state.queues:
-                    print(len(q.queue), q.current_delay())
-                raise ValueError('error, tasked dropped (disregard if operating at/near capacity), delay was {0}, client demand: {1}, client credits: {2}'
-                                 .format(breakwater.max_delay, self.current_demand, self.credits))
+                # print("queue lengths and delays")
+                # for q in self.state.queues:
+                #     print(len(q.queue), q.current_delay())
+                # raise ValueError('error, tasked dropped (disregard if operating at/near capacity), delay was {0}, client demand: {1}, client credits: {2}'
+                #                  .format(breakwater.max_delay, self.current_demand, self.credits))
 
             # may have just finished our last task
             #if self.current_demand <= 0:

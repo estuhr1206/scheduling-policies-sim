@@ -38,12 +38,12 @@ class BreakwaterServer:
         self.overcommitment_credits = max(int(credits_to_send / self.num_clients), 1)
 
         # TODO remove, debugging
-        self.counter += 1
-        if self.counter >= 1000:
-            print("max_delay: {0}, pool: {1}, credits to send: {2}. overcommit: {3}".format(
-                max_delay, self.total_credits, credits_to_send, self.overcommitment_credits
-            ))
-            self.counter = 0
+        # self.counter += 1
+        # if self.counter >= 1000:
+        #     print("max_delay: {0}, pool: {1}, credits to send: {2}. overcommit: {3}".format(
+        #         max_delay, self.total_credits, credits_to_send, self.overcommitment_credits
+        #     ))
+        #     self.counter = 0
         
 
         if self.num_clients > 0:
