@@ -34,9 +34,9 @@ class BreakwaterClient:
         # should call spend_credits
         if self.credits > 0:
             self.spend_credits()
-        else:
+        elif self.credits < 0:
             # print out that something is wrong
-            print("error, credits < 0")
+            raise ValueError("error, credits < 0")
 
     # can instead call the server's register function
     # def register_with_server(self):
@@ -71,7 +71,16 @@ class BreakwaterClient:
                 self.state.queues[chosen_queue].enqueue(current_task, set_original=True)
             else:
                 # shouldn't be dropped if load is low (aka the 50%)
-                raise ValueError('error, tasked dropped (disregard if operating at/near capacity)')
+                
+                breakwater = self.state.breakwater_server
+                print("dumping info for debugging")
+                print("breakwater: credit pool: {0}, credits issued: {1}".format(breakwater.total_credits, breakwater.credits_issued))
+
+                print("queue lengths and delays")
+                for q in self.state.queues:
+                    print(len(q.queue), q.current_delay())
+                raise ValueError('error, tasked dropped (disregard if operating at/near capacity), delay was {0}, client demand: {1}, client credits: {2}'
+                                 .format(breakwater.max_delay, self.current_demand, self.credits))
 
             # may have just finished our last task
             #if self.current_demand <= 0:

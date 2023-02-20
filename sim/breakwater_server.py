@@ -9,7 +9,7 @@ class BreakwaterServer:
 
         self.RTT = RTT
         self.target_delay = TARGET_DELAY
-        self.total_credits = 0
+        self.total_credits = 50
         self.credits_issued = 0
         # this will get updated by register
         self.num_clients = 0
@@ -18,6 +18,9 @@ class BreakwaterServer:
         self.BETA = BETA
         self.overcommitment_credits = 0
         self.max_delay = 0
+
+        # TODO remove, debugging
+        self.counter = 0
 
     def control_loop(self, max_delay=0):
         self.max_delay = max_delay
@@ -31,7 +34,17 @@ class BreakwaterServer:
             self.total_credits = int(self.total_credits * reduction)
 
         credits_to_send = self.total_credits - self.credits_issued
+        # overcommitment seems to allow massive amounts of credits to build up at client
         self.overcommitment_credits = max(int(credits_to_send / self.num_clients), 1)
+
+        # TODO remove, debugging
+        self.counter += 1
+        if self.counter >= 1000:
+            print("max_delay: {0}, pool: {1}, credits to send: {2}. overcommit: {3}".format(
+                max_delay, self.total_credits, credits_to_send, self.overcommitment_credits
+            ))
+            self.counter = 0
+        
 
         if self.num_clients > 0:
             self.send_credits(int(credits_to_send))
@@ -82,6 +95,10 @@ class BreakwaterServer:
                     chosen_client.add_credit()
                     self.credits_issued += 1
                     i += 1
+                else:
+                    # TODO for debugging purposes, client de registering is off right now
+                    # if our single client doesn't get any credits, just stop
+                    break
 
         elif credits_to_send < 0:
             """
