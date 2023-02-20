@@ -15,5 +15,5 @@ do
     # Rename the directory to the new name
     NEW_NAME="${PREFIX}${POSTFIX}${i}"
     mv "${DIR}" "${NEW_NAME}"
-	((i++))
+    ((i++))
 done
