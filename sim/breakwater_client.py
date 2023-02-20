@@ -14,7 +14,7 @@ class BreakwaterClient:
     def __init__(self, state):
         # Where tasks from task creation are placed once they have "arrived"
         self.queue = deque()
-        # credits are incremented by server, decremented(used) by client
+        # credits are incremented by server, decremented(used) by client. used as Cx from paper calculations
         self.credits = 0
         # equivalent to number of requests in queue
         self.current_demand = 0
@@ -50,7 +50,7 @@ class BreakwaterClient:
             # self.deregister()
             # if < 0, something is wrong.
             if self.current_demand < 0:
-                print("error, demand was below 0")
+                raise ValueError('error, demand was below 0')
         else:
             # aqm can happen here, simply don't enqueue it at a core if delay is high
             self.state.breakwater_server.credits_issued -= 1
@@ -71,7 +71,7 @@ class BreakwaterClient:
                 self.state.queues[chosen_queue].enqueue(current_task, set_original=True)
             else:
                 # shouldn't be dropped if load is low (aka the 50%)
-                print("error, tasked dropped (disregard if operating at/near capacity)")
+                raise ValueError('error, tasked dropped (disregard if operating at/near capacity)')
 
             # may have just finished our last task
             #if self.current_demand <= 0:
@@ -84,6 +84,7 @@ class BreakwaterClient:
         # TODO is multiple credit spending necessary?
         # clients attempt to spend credits upon a task enqueue or receiving credit
         # should not be in a situation where all possible spending is not performed
+
     # simplify debugging, don't deregister
     def deregister(self):
         # important that this call to server is first, as it will take back credits the client currently has

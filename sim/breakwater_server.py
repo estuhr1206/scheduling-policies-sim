@@ -31,22 +31,17 @@ class BreakwaterServer:
             self.total_credits = int(self.total_credits * reduction)
 
         credits_to_send = self.total_credits - self.credits_issued
+        self.overcommitment_credits = max(int(credits_to_send / self.num_clients), 1)
+
         if self.num_clients > 0:
             self.send_credits(int(credits_to_send))
 
-        self.overcommitment_credits = max(int(credits_to_send / self.num_clients), 1)
-
-        # per client
-        # random distribution for now, so no demand tracking of clients
-        # total_overcommitment = self.overcommitment_credits * self.num_clients
-        # pool_plus_overcommitment = total_overcommitment + self.total_credits
-
     def send_credits(self, credits_to_send):
+
         if credits_to_send > 0:
-            
             # idea 1: Might loop forever? but hopefully client
             # would simply deregister without fail once it has 0 demand
-            i = 0
+            # i = 0
             # while i < credits_to_send:
             #     if self.num_clients <= 0:
             #         break
@@ -71,12 +66,22 @@ class BreakwaterServer:
             #         self.credits_issued += 1
 
             # idea 3, just give out credits regardless of demand?
-            for i in range(credits_to_send):
+            # for i in range(credits_to_send):
+            #     chosen_client = random.choice(self.clients)
+            #     chosen_client.add_credit()
+            #     self.credits_issued += 1
+            # TODO attempting to fix distribution
+            i = 0
+            while i < credits_to_send:
+                if self.num_clients <= 0:
+                    break
                 chosen_client = random.choice(self.clients)
-                chosen_client.add_credit()
-                self.credits_issued += 1
-            # TODO using this for debugging, because clients can't deregister right now
-            # single client regardless
+                Cx_new = min(chosen_client.current_demand + self.overcommitment_credits,
+                             chosen_client.credits + (self.total_credits - self.credits_issued))
+                if Cx_new - chosen_client.credits > 0:
+                    chosen_client.add_credit()
+                    self.credits_issued += 1
+                    i += 1
 
         elif credits_to_send < 0:
             """
@@ -85,7 +90,7 @@ class BreakwaterServer:
                 unused credits, the server sends negative credits to revoke the
                 credits issued earlier. 
             """
-            # Idea 1, definitive number of tries
+            # definitive number of tries
             # probably won't revoke total number of credits, but, it does mimic
             # the paper in that it attempts to revoke that number of credits.
             for i in range(credits_to_send):
@@ -94,8 +99,26 @@ class BreakwaterServer:
                     chosen_client.credits -= 1
                     self.credits_issued -= 1
 
+            # paper implementation does not make sense for now
+            # would unfairly take away lots of credits from a single client,
+            # because we are not doing lazy distribution
+
+            # Cx_new = min(chosen_client.current_demand + self.overcommitment_credits,
+            #              chosen_client.credits - 1)
+            #
+            # credits_to_revoke = Cx_new - chosen_client.credits
+            # chosen_client.credits += credits_to_revoke
+            # # this should always be negative
+            # if credits_to_revoke >= 0:
+            #     raise ValueError('credits_to_revoke should never be positive, was {}'.format(credits_to_revoke))
+            # self.credits_issued += credits_to_revoke
+
     def client_register(self, client):
         self.clients.append(client)
+        # TODO client receives credit upon register
+        # should this still not happen if we are overloaded?
+        self.credits_issued += 1
+        client.credits += 1
         self.num_clients += 1
         """
             credit distribution should not be instantaneous, even if there were credits to grant
