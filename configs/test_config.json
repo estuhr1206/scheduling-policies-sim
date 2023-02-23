@@ -42,7 +42,7 @@
  "sim_duration": 100000000,
  "locking_enabled": false,
  "work_stealing_enabled": true,
- "parking_enabled": false,
+ "parking_enabled": true,
  "fast_forward_enabled": true,
  "record_allocations": false,
  "reallocation_record": null,
