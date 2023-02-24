@@ -368,7 +368,7 @@ class SimulationState:
         # initialize breakwater
         if self.config.breakwater_enabled:
             self.breakwater_server = BreakwaterServer(self.config.RTT, self.config.BREAKWATER_AGGRESSIVENESS_ALPHA,
-                                                      self.config.BREAKWATER_BETA, self.config.BREAKWATER_TARGET_DELAY)
+                                                      self.config.BREAKWATER_BETA, self.config.BREAKWATER_TARGET_DELAY, self)
             for i in range(config.NUM_CLIENTS):
                 self.all_clients.append(BreakwaterClient(self))
 
