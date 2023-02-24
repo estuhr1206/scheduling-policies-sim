@@ -16,10 +16,12 @@ class SimConfig:
                  enqueue_by_st_sum=False, always_check_realloc=False, ideal_flag_steal=False, delay_range_by_service_time=False,
                  ideal_reallocation=False, fred_reallocation=False, spin_parking_enabled=False, utilization_range_enabled=False,
                  allow_naive_idle=False, work_steal_park_enabled=False, bimodal_service_time=False, join_bounded_shortest_queue=False,
-                 record_queue_lens=False, breakwater_enabled=False):
+                 record_queue_lens=False, breakwater_enabled=False, record_request_drops=False, record_credit_pool=False):
 
         # Breakwater configuration
         self.breakwater_enabled = breakwater_enabled
+        self.record_request_drops = record_request_drops
+        self.record_credit_pool = record_credit_pool
 
         # Basic configuration
         self.name = name

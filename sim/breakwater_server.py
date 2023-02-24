@@ -5,8 +5,8 @@ import random
 
 class BreakwaterServer:
 
-    def __init__(self, RTT, ALPHA, BETA, TARGET_DELAY):
-
+    def __init__(self, RTT, ALPHA, BETA, TARGET_DELAY, state):
+        self.state = state
         self.RTT = RTT
         self.target_delay = TARGET_DELAY
         self.total_credits = 50
@@ -18,6 +18,8 @@ class BreakwaterServer:
         self.BETA = BETA
         self.overcommitment_credits = 0
         self.max_delay = 0
+
+        self.credit_pool_records = []
 
         # TODO remove, debugging
         self.counter = 0
@@ -44,10 +46,15 @@ class BreakwaterServer:
         #         max_delay, self.total_credits, credits_to_send, self.overcommitment_credits
         #     ))
         #     self.counter = 0
-        
+        if self.state.config.record_credit_pool:
+            self.credit_pool_records.append([self.total_credits, self.credits_issued, self.overcommitment_credits])
 
         if self.num_clients > 0:
             self.send_credits(int(credits_to_send))
+        # TODO I think it should be interesting to see the credit pool both before and after
+        # there is an attempt to issue the credits?
+        if self.state.config.record_credit_pool:
+            self.credit_pool_records.append([self.total_credits, self.credits_issued, self.overcommitment_credits])
 
     def send_credits(self, credits_to_send):
 

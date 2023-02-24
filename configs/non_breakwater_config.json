@@ -36,6 +36,8 @@
  30,
  31
 ],
+ "record_credit_pool": false,
+ "record_request_drops": false,
  "breakwater_enabled": false,
  "load_thread_count": 32,
  "num_tasks": null,

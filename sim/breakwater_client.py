@@ -20,11 +20,13 @@ class BreakwaterClient:
         self.current_demand = 0
         self.registered = False
         self.state = state
+        self.dropped_tasks = 0
+        self.total_tasks = 0
 
     def enqueue_task(self, task):
         self.queue.append(task)
         self.current_demand += 1
-
+        self.total_tasks += 1
         if not self.registered:
             self.state.breakwater_server.client_register(self)
             self.registered = True
@@ -72,7 +74,7 @@ class BreakwaterClient:
             else:
                 # shouldn't be dropped if load is low (aka the 50%)
                 # TODO can be put back in, will cause issues for varycores run
-                pass
+                self.dropped_tasks += 1
                 # breakwater = self.state.breakwater_server
                 # print("dumping info for debugging")
                 # print("breakwater: credit pool: {0}, credits issued: {1}".format(breakwater.total_credits, breakwater.credits_issued))

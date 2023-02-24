@@ -516,6 +516,22 @@ class Simulation:
                 qlen_file.write(",".join([str(x) for x in lens]) + "\n")
             qlen_file.close()
 
+        # breakwater
+        if self.config.record_request_drops:
+            request_drops_file = open("{}request_drops.csv".format(new_dir_name), "w")
+            request_drops_file.write("Total Tasks,Dropped Tasks\n")
+            for client in self.state.all_clients:
+                request_drops_file.write("{},{},\n".format(client.total_tasks, client.dropped_tasks))
+            request_drops_file.close()
+
+        if self.config.record_credit_pool:
+            credit_pool_file = open("{}credit_pool.csv".format(new_dir_name), "w")
+            credit_pool_file.write("Total Credits,Credits Issued,Overcommitment Credits\n")
+            for record in self.state.breakwater_server.credit_pool_records:
+                credit_pool_file.write(",".join([str(x) for x in record]) + "\n")
+            credit_pool_file.close()
+
+
 
 if __name__ == "__main__":
 
