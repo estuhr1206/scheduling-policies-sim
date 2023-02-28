@@ -105,7 +105,7 @@ class BreakwaterClient:
     def add_credit(self):
         self.credits += 1
         # should call spend credits
-        self.spend_credits(from_control_loop=True)
+        return self.spend_credits(from_control_loop=True)
         # TODO is multiple credit spending necessary?
         # clients attempt to spend credits upon a task enqueue or receiving credit
         # should not be in a situation where all possible spending is not performed

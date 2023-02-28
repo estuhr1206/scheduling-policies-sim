@@ -47,8 +47,6 @@ class BreakwaterServer:
         #         max_delay, self.total_credits, credits_to_send, self.overcommitment_credits
         #     ))
         #     self.counter = 0
-        if self.state.config.record_credit_pool:
-            self.credit_pool_records.append([self.total_credits, self.credits_issued, self.overcommitment_credits])
 
         if self.num_clients > 0:
             self.send_credits(int(credits_to_send))
@@ -95,7 +93,7 @@ class BreakwaterServer:
             i = 0
             credits_spent_at_once = 0
             # TODO checking value just in case while still using single client
-            requests_at_once_record = [credits_to_send, self.state.all_clients[0].demand]
+            requests_at_once_record = [credits_to_send, self.state.all_clients[0].current_demand]
             while i < credits_to_send:
                 if self.num_clients <= 0:
                     break

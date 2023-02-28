@@ -43,7 +43,7 @@
  "breakwater_enabled": true,
  "load_thread_count": 32,
  "num_tasks": null,
- "sim_duration": 10000000,
+ "sim_duration": 100000000,
  "locking_enabled": false,
  "work_stealing_enabled": true,
  "parking_enabled": true,
