@@ -20,6 +20,7 @@ class BreakwaterServer:
         self.max_delay = 0
 
         self.credit_pool_records = []
+        self.requests_at_once = []
 
         # TODO remove, debugging
         self.counter = 0
@@ -92,6 +93,9 @@ class BreakwaterServer:
             #     self.credits_issued += 1
             # TODO attempting to fix distribution
             i = 0
+            credits_spent_at_once = 0
+            # TODO checking value just in case while still using single client
+            requests_at_once_record = [credits_to_send, self.state.all_clients[0].demand]
             while i < credits_to_send:
                 if self.num_clients <= 0:
                     break
@@ -99,13 +103,20 @@ class BreakwaterServer:
                 Cx_new = min(chosen_client.current_demand + self.overcommitment_credits,
                              chosen_client.credits + (self.total_credits - self.credits_issued))
                 if Cx_new - chosen_client.credits > 0:
-                    chosen_client.add_credit()
+                    if chosen_client.add_credit():
+                        credits_spent_at_once += 1
                     self.credits_issued += 1
                     i += 1
                 else:
                     # TODO for debugging purposes, client de registering is off right now
                     # if our single client doesn't get any credits, just stop
                     break
+            # maybe record this, but maybe also record
+            # maybe just recording client demand? like all the time?
+            # that's too much, every RTT maybe?
+            if self.state.config.record_requests_at_once:
+                requests_at_once_record.append(credits_spent_at_once)
+                self.requests_at_once.append(requests_at_once_record)
 
         elif credits_to_send < 0:
             """
