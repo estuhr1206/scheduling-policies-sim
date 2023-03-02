@@ -11,7 +11,7 @@ import random
 
 class BreakwaterClient:
 
-    def __init__(self, state):
+    def __init__(self, state, identifier):
         # Where tasks from task creation are placed once they have "arrived"
         self.queue = deque()
         # credits are incremented by server, decremented(used) by client. used as Cx from paper calculations
@@ -24,6 +24,8 @@ class BreakwaterClient:
         self.total_tasks = 0
         self.cores_at_drops = []
         self.tasks_spent_control_loop = 0
+
+        self.id = identifier
 
     def enqueue_task(self, task):
         self.queue.append(task)
@@ -41,10 +43,6 @@ class BreakwaterClient:
         elif self.credits < 0:
             # print out that something is wrong
             raise ValueError("error, credits < 0")
-
-    # can instead call the server's register function
-    # def register_with_server(self):
-    #     pass
 
     def spend_credits(self, from_control_loop=False):
 
@@ -80,6 +78,7 @@ class BreakwaterClient:
                 # this is ok, because the arrival time usage for enqueuing at clients occurs before this
                 # override here
                 current_task.arrival_time = self.state.timer.get_time()
+                current_task.source_client = self.id
                 # enqueue at core
                 self.state.queues[chosen_queue].enqueue(current_task, set_original=True)
             else:
@@ -91,12 +90,7 @@ class BreakwaterClient:
                 # print("dumping info for debugging")
                 # print("breakwater: credit pool: {0}, credits issued: {1}".format(breakwater.total_credits, breakwater.credits_issued))
 
-                # print("queue lengths and delays")
-                # for q in self.state.queues:
-                #     print(len(q.queue), q.current_delay())
-                # raise ValueError('error, tasked dropped (disregard if operating at/near capacity), delay was {0}, client demand: {1}, client credits: {2}'
-                #                  .format(breakwater.max_delay, self.current_demand, self.credits))
-
+            # TODO deregister is off for now
             # may have just finished our last task
             #if self.current_demand <= 0:
                 # self.deregister()

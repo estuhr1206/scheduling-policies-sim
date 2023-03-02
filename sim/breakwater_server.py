@@ -13,7 +13,8 @@ class BreakwaterServer:
         self.credits_issued = 0
         # this will get updated by register
         self.num_clients = 0
-        self.clients = []
+        # update clients to be indices, not actual clients, allowing clients to be identified
+        self.available_client_ids = []
         self.AGGRESSIVENESS_ALPHA = ALPHA
         self.BETA = BETA
         self.overcommitment_credits = 0
@@ -21,9 +22,6 @@ class BreakwaterServer:
 
         self.credit_pool_records = []
         self.requests_at_once = []
-
-        # TODO remove, debugging
-        self.counter = 0
 
     def control_loop(self, max_delay=0):
         self.max_delay = max_delay
@@ -40,20 +38,49 @@ class BreakwaterServer:
         # overcommitment seems to allow massive amounts of credits to build up at client
         self.overcommitment_credits = max(int(credits_to_send / self.num_clients), 1)
 
-        # TODO remove, debugging
-        # self.counter += 1
-        # if self.counter >= 1000:
-        #     print("max_delay: {0}, pool: {1}, credits to send: {2}. overcommit: {3}".format(
-        #         max_delay, self.total_credits, credits_to_send, self.overcommitment_credits
-        #     ))
-        #     self.counter = 0
-
-        if self.num_clients > 0:
-            self.send_credits(int(credits_to_send))
-        # TODO I think it should be interesting to see the credit pool both before and after
-        # there is an attempt to issue the credits?
+        # if self.num_clients > 0:
+        #     self.send_credits(int(credits_to_send))
+        # update: credits will now be sent upon task completion to better emulate
+        # how breakwater was actually implemented
         if self.state.config.record_credit_pool:
             self.credit_pool_records.append([self.total_credits, self.credits_issued, self.overcommitment_credits])
+
+    def lazy_distribution(self, client_id):
+        # hmmmmmmm
+        """
+            for one client, this is easy and makes sense. We're just changing where the send credit call
+            happens
+
+            For multiple clients, it's a bit more hairy.
+            Or is it???
+
+            actually, the whole thing is more that we don't really need a "send credit" method
+            or at least, not in its current state, choosing random clients and such.
+
+            issue
+            if demand is sky high, won't a single client eat up all available credits?
+            how does this ever become fair?
+            Won't that single client then also have more opportunities (more responses to task
+            completions) to get more credits and have a feedback loop?
+
+            TODO but not a big deal for now
+
+        """
+        client = self.all_clients[client_id]
+        available_credits = self.total_credits - self.credits_issued
+        if available_credits > 0:
+            Cx_new = min(client.current_demand + self.overcommitment_credits,
+                         client.credits + (self.total_credits - self.credits_issued))
+            if Cx_new - client.credits > 0:
+                # client might spend credit immediately, but that's ok
+                # TODO technically should be sending multiple at once
+                # is it bad that client gets these instantaneously for now?
+                self.credits_issued += 1
+                client.add_credit()
+
+        elif available_credits < 0:
+            # grab calculation from paper
+            pass
 
     def send_credits(self, credits_to_send):
 
@@ -97,7 +124,8 @@ class BreakwaterServer:
             while i < credits_to_send:
                 if self.num_clients <= 0:
                     break
-                chosen_client = random.choice(self.clients)
+                chosen_client_id = random.choice(self.available_client_ids)
+                chosen_client = self.all_clients[chosen_client_id]
                 Cx_new = min(chosen_client.current_demand + self.overcommitment_credits,
                              chosen_client.credits + (self.total_credits - self.credits_issued))
                 if Cx_new - chosen_client.credits > 0:
@@ -127,7 +155,8 @@ class BreakwaterServer:
             # probably won't revoke total number of credits, but, it does mimic
             # the paper in that it attempts to revoke that number of credits.
             for i in range(credits_to_send):
-                chosen_client = random.choice(self.clients)
+                chosen_client_id = random.choice(self.available_client_ids)
+                chosen_client = self.all_clients[chosen_client_id]
                 if chosen_client.credits > 0:
                     chosen_client.credits -= 1
                     self.credits_issued -= 1
@@ -147,27 +176,19 @@ class BreakwaterServer:
             # self.credits_issued += credits_to_revoke
 
     def client_register(self, client):
-        self.clients.append(client)
-        # TODO client receives credit upon register
-        # should this still not happen if we are overloaded?
+        self.clients.append(client.id)
+        # TODO should this still happen if we are overloaded?
         self.credits_issued += 1
-        client.credits += 1
+        # client.credits += 1
+        # now, client should be allowed to spend this credit
+        client.add_credit()
         self.num_clients += 1
-        """
-            credit distribution should not be instantaneous, even if there were credits to grant
-            to this client.
-
-            It should happen when the control loop runs, every RTT. 
-            normally, credits could be sent on the register response, but we don't really have a concept of this here
-
-            the next RTT truly is the soonest that response could arrive regardless
-        """
 
     def client_deregister(self, client):
         # credits yielded by client
         self.credits_issued -= client.credits
 
-        self.clients.remove(client)
+        self.clients.remove(client.id)
         self.num_clients -= 1
 
 
