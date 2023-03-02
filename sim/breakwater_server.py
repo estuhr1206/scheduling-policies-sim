@@ -71,16 +71,42 @@ class BreakwaterServer:
         if available_credits > 0:
             Cx_new = min(client.current_demand + self.overcommitment_credits,
                          client.credits + (self.total_credits - self.credits_issued))
-            if Cx_new - client.credits > 0:
-                # client might spend credit immediately, but that's ok
-                # TODO technically should be sending multiple at once
-                # is it bad that client gets these instantaneously for now?
-                self.credits_issued += 1
-                client.add_credit()
 
         elif available_credits < 0:
             # grab calculation from paper
-            pass
+            # demand + overcommitment is at least 1 (with 0 demand)
+            # what if client is already at 0 credits?
+            Cx_new = min(client.current_demand + self.overcommitment_credits,
+                         client.credits - 1)
+        # possible for both situations to result in adding or subtracting credits, depending on
+        # demand/pool?
+        credits_to_send = Cx_new - client.credits
+        self.send_credits_lazy(client, credits_to_send)
+
+    def send_credits_lazy(self, client, credits_to_send):
+        # TODO not a real concept of "coalescing messages" here
+        # this will result in this code running for every single task: might add significant time to sim
+        if credits_to_send > 0:
+            # client might spend credit immediately, but that's ok
+            # is it bad that client gets these instantaneously for now? no RTT
+            credits_spent_at_once = 0
+            requests_at_once_record = [credits_to_send, client.current_demand]
+            for i in range(credits_to_send):
+                self.credits_issued += 1
+                if client.add_credit():
+                    credits_spent_at_once += 1
+            # this might be a bad record. Happens for every single task....
+            if self.state.config.record_requests_at_once:
+                requests_at_once_record.append(credits_spent_at_once)
+                self.requests_at_once.append(requests_at_once_record)
+        elif credits_to_send < 0:
+            credits_to_revoke = -credits_to_send
+            if client.credits < credits_to_revoke:
+                self.credits_issued -= client.credits
+                client.credits = 0
+            else:
+                client.credits -= credits_to_revoke
+                self.credits_issued -= credits_to_revoke
 
     def send_credits(self, credits_to_send):
 
