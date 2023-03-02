@@ -66,7 +66,7 @@ class BreakwaterServer:
             TODO but not a big deal for now
 
         """
-        client = self.all_clients[client_id]
+        client = self.state.all_clients[client_id]
         available_credits = self.total_credits - self.credits_issued
         if available_credits > 0:
             Cx_new = min(client.current_demand + self.overcommitment_credits,
@@ -78,6 +78,9 @@ class BreakwaterServer:
             # what if client is already at 0 credits?
             Cx_new = min(client.current_demand + self.overcommitment_credits,
                          client.credits - 1)
+        else:
+            # no credit updates needed
+            return
         # possible for both situations to result in adding or subtracting credits, depending on
         # demand/pool?
         credits_to_send = Cx_new - client.credits
@@ -151,7 +154,7 @@ class BreakwaterServer:
                 if self.num_clients <= 0:
                     break
                 chosen_client_id = random.choice(self.available_client_ids)
-                chosen_client = self.all_clients[chosen_client_id]
+                chosen_client = self.state.all_clients[chosen_client_id]
                 Cx_new = min(chosen_client.current_demand + self.overcommitment_credits,
                              chosen_client.credits + (self.total_credits - self.credits_issued))
                 if Cx_new - chosen_client.credits > 0:
@@ -182,7 +185,7 @@ class BreakwaterServer:
             # the paper in that it attempts to revoke that number of credits.
             for i in range(credits_to_send):
                 chosen_client_id = random.choice(self.available_client_ids)
-                chosen_client = self.all_clients[chosen_client_id]
+                chosen_client = self.state.all_clients[chosen_client_id]
                 if chosen_client.credits > 0:
                     chosen_client.credits -= 1
                     self.credits_issued -= 1
@@ -202,7 +205,7 @@ class BreakwaterServer:
             # self.credits_issued += credits_to_revoke
 
     def client_register(self, client):
-        self.clients.append(client.id)
+        self.available_client_ids.append(client.id)
         # TODO should this still happen if we are overloaded?
         self.credits_issued += 1
         # client.credits += 1
@@ -214,7 +217,7 @@ class BreakwaterServer:
         # credits yielded by client
         self.credits_issued -= client.credits
 
-        self.clients.remove(client.id)
+        self.available_client_ids.remove(client.id)
         self.num_clients -= 1
 
 
