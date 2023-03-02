@@ -368,7 +368,7 @@ class SimulationState:
         # initialize breakwater
         if self.config.breakwater_enabled:
             self.breakwater_server = BreakwaterServer(self.config.RTT, self.config.BREAKWATER_AGGRESSIVENESS_ALPHA,
-                                                      self.config.BREAKWATER_BETA, self.config.BREAKWATER_TARGET_DELAY)
+                                                      self.config.BREAKWATER_BETA, self.config.BREAKWATER_TARGET_DELAY, self)
             for i in range(config.NUM_CLIENTS):
                 self.all_clients.append(BreakwaterClient(self))
 
@@ -382,6 +382,17 @@ class SimulationState:
                 self.threads[i].sibling = self.threads[i - 1]
 
         # Set tasks and arrival times
+        """
+            example of next task time: 4 cores, 0.5 average load, 1000 ns average service time
+            2/1000 = 0.002. 
+            1/0.002 = 500 ns between requests (on average)
+            client has no demand: then next RTT it suddenly has 10 requests. 
+            let's say it spends 10 credits right then and there
+            back to 0 demand, deregisters self. rinse and repeat next RTT
+            
+            This likely causes high delay at the queues, because of this very jagged
+            enqueuing every RTT by the client
+        """
         request_rate = config.avg_system_load * config.load_thread_count / config.AVERAGE_SERVICE_TIME
         next_task_time = int(1/request_rate) if config.regular_arrivals else int(random.expovariate(request_rate))
         if config.bimodal_service_time:

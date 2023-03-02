@@ -516,6 +516,37 @@ class Simulation:
                 qlen_file.write(",".join([str(x) for x in lens]) + "\n")
             qlen_file.close()
 
+        # breakwater
+        if self.config.record_breakwater_info:
+            breakwater_info_file = open("{}breakwater_info.csv".format(new_dir_name), "w")
+            breakwater_info_file.write("Total Tasks,Dropped Tasks,Immediate Tasks\n")
+            for client in self.state.all_clients:
+                breakwater_info_file.write("{},{},{}\n".format(client.total_tasks, client.dropped_tasks,
+                                                               client.tasks_spent_control_loop))
+            breakwater_info_file.close()
+
+        if self.config.record_credit_pool:
+            credit_pool_file = open("{}credit_pool.csv".format(new_dir_name), "w")
+            credit_pool_file.write("Total Credits,Credits Issued,Overcommitment Credits\n")
+            for record in self.state.breakwater_server.credit_pool_records:
+                credit_pool_file.write(",".join([str(x) for x in record]) + "\n")
+            credit_pool_file.close()
+        # TODO good way to record this for multiple clients?
+        if self.config.record_cores_at_drops:
+            cores_at_drops_file = open("{}cores_at_drops.csv".format(new_dir_name), "w")
+            cores_at_drops_file.write("Time,Available Queues\n")
+            for record in self.state.all_clients[0].cores_at_drops:
+                cores_at_drops_file.write(",".join([str(x) for x in record]) + "\n")
+            cores_at_drops_file.close()
+
+        if self.state.config.record_requests_at_once:
+            requests_at_once_file = open("{}requests_at_once.csv".format(new_dir_name), "w")
+            requests_at_once_file.write("Credits To Send,Demand,Credits Spent\n")
+            for record in self.state.breakwater_server.requests_at_once:
+                requests_at_once_file.write(",".join([str(x) for x in record]) + "\n")
+            requests_at_once_file.close()
+
+
 
 if __name__ == "__main__":
 
