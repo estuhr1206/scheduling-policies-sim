@@ -3,10 +3,10 @@
  "num_queues": 4,
  "num_threads": 4,
  "mapping": [
- 0,
- 1,
- 2,
- 3
+    0,
+    1,
+    2,
+    3
 ],
  "record_credit_pool": true,
  "record_breakwater_info": true,
@@ -15,7 +15,7 @@
  "breakwater_enabled": true,
  "load_thread_count": 4,
  "num_tasks": null,
- "sim_duration": 100000000,
+ "sim_duration": 10000000,
  "locking_enabled": false,
  "work_stealing_enabled": true,
  "parking_enabled": true,
