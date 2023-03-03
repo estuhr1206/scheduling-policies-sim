@@ -546,6 +546,13 @@ class Simulation:
                 requests_at_once_file.write(",".join([str(x) for x in record]) + "\n")
             requests_at_once_file.close()
 
+        # TODO debugging
+        debugging_file = open("{}debugging.csv".format(new_dir_name), "w")
+        debugging_file.write("Time,Credits To Send,Cx_new,Client Credits,Client Demand,Client ID\n")
+        for record in self.state.breakwater_server.debug_records:
+            debugging_file.write(",".join([str(x) for x in record]) + "\n")
+        debugging_file.close()
+
 
 
 if __name__ == "__main__":

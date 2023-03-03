@@ -23,6 +23,9 @@ class BreakwaterServer:
         self.credit_pool_records = []
         self.requests_at_once = []
 
+        # TODO debugging
+        self.debug_records = []
+
     def control_loop(self, max_delay=0):
         self.max_delay = max_delay
         # total credit pool
@@ -68,9 +71,10 @@ class BreakwaterServer:
         """
         client = self.state.all_clients[client_id]
         available_credits = self.total_credits - self.credits_issued
+        Cx_new = 0
         if available_credits > 0:
             Cx_new = min(client.current_demand + self.overcommitment_credits,
-                         client.credits + (self.total_credits - self.credits_issued))
+                         client.credits + available_credits)
 
         elif available_credits < 0:
             # grab calculation from paper
@@ -83,7 +87,11 @@ class BreakwaterServer:
             return
         # possible for both situations to result in adding or subtracting credits, depending on
         # demand/pool?
+
         credits_to_send = Cx_new - client.credits
+        # TODO debugging
+        debug = [self.state.timer.get_time(), credits_to_send, Cx_new, client.credits, client.current_demand, client_id]
+        self.debug_records.append(debug)
         self.send_credits_lazy(client, credits_to_send)
 
     def send_credits_lazy(self, client, credits_to_send):
