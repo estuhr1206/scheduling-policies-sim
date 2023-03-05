@@ -17,7 +17,7 @@ class BreakwaterClient:
         # credits are incremented by server, decremented(used) by client. used as Cx from paper calculations
         # self.credits = 0
         # v3, adding in concept of credits in use and credits unused
-        # TODO might be unnecessary
+        self.window = 0
         self.c_in_use = 0
         self.c_unused = 0
         # equivalent to number of requests in queue
@@ -62,8 +62,9 @@ class BreakwaterClient:
             if from_control_loop:
                 self.tasks_spent_control_loop += 1
             # aqm can happen here, simply don't enqueue it at a core if delay is high
-            self.state.breakwater_server.credits_issued -= 1
+            # self.state.breakwater_server.credits_issued -= 1
             self.c_unused -= 1
+            self.c_in_use += 1
 
             current_task = self.queue.popleft()
             self.current_demand -= 1
@@ -79,7 +80,6 @@ class BreakwaterClient:
             # delay = self.state.queues[chosen_queue].current_delay()
             delay = self.state.max_queue_delay()
             if delay <= 2 * self.state.config.BREAKWATER_TARGET_DELAY:
-                self.c_in_use += 1
                 # need to override arrival time for core usage
                 # this is ok, because the arrival time usage for enqueuing at clients occurs before this
                 # override here
@@ -89,6 +89,15 @@ class BreakwaterClient:
                 self.state.queues[chosen_queue].enqueue(current_task, set_original=True)
             else:
                 # shouldn't be dropped if load is low (aka the 50%)
+                """
+                    TODO possible for client to get x credits, and try to spend x times and have it fail each time
+                    actually, that seems ok, because then when it gets a task, it can try to use the excess
+                    we'll see
+
+                    this means client knows it failed immediately, effectively gets a free retry
+                """
+                self.c_unused += 1
+                self.c_in_use -= 1
                 self.dropped_tasks += 1
                 if self.state.config.record_cores_at_drops:
                     self.cores_at_drops.append([self.state.timer.get_time(), len(self.state.available_queues)])
