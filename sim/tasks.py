@@ -76,6 +76,7 @@ class Task:
         self.state.complete_task_count += 1
         # breakwater
         if self.config.breakwater_enabled:
+            self.state.all_clients[self.source_client].c_in_use -= 1
             self.state.breakwater_server.lazy_distribution(self.source_client)
 
     def is_zero_duration(self):

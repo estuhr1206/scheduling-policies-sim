@@ -15,7 +15,11 @@ class BreakwaterClient:
         # Where tasks from task creation are placed once they have "arrived"
         self.queue = deque()
         # credits are incremented by server, decremented(used) by client. used as Cx from paper calculations
-        self.credits = 0
+        # self.credits = 0
+        # v3, adding in concept of credits in use and credits unused
+        # TODO might be unnecessary
+        self.c_in_use = 0
+        self.c_unused = 0
         # equivalent to number of requests in queue
         self.current_demand = 0
         self.registered = False
@@ -38,9 +42,9 @@ class BreakwaterClient:
         # tasks from that main list will get enqueued at random clients
 
         # should call spend_credits
-        if self.credits > 0:
+        if self.c_unused > 0:
             self.spend_credits()
-        elif self.credits < 0:
+        elif self.c_unused < 0:
             # print out that something is wrong
             raise ValueError("error, credits < 0")
 
@@ -59,7 +63,8 @@ class BreakwaterClient:
                 self.tasks_spent_control_loop += 1
             # aqm can happen here, simply don't enqueue it at a core if delay is high
             self.state.breakwater_server.credits_issued -= 1
-            self.credits -= 1
+            self.c_unused -= 1
+
             current_task = self.queue.popleft()
             self.current_demand -= 1
 
@@ -74,6 +79,7 @@ class BreakwaterClient:
             # delay = self.state.queues[chosen_queue].current_delay()
             delay = self.state.max_queue_delay()
             if delay <= 2 * self.state.config.BREAKWATER_TARGET_DELAY:
+                self.c_in_use += 1
                 # need to override arrival time for core usage
                 # this is ok, because the arrival time usage for enqueuing at clients occurs before this
                 # override here
@@ -97,7 +103,7 @@ class BreakwaterClient:
             return True
 
     def add_credit(self):
-        self.credits += 1
+        self.c_unused += 1
         # should call spend credits
         return self.spend_credits(from_control_loop=True)
         # TODO is multiple credit spending necessary?
@@ -109,6 +115,6 @@ class BreakwaterClient:
         # important that this call to server is first, as it will take back credits the client currently has
         self.state.breakwater_server.client_deregister(self)
         self.registered = False
-        self.credits = 0
+        self.c_unused = 0
 
 

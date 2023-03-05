@@ -42,7 +42,7 @@ class BreakwaterServer:
         self.overcommitment_credits = max(int(credits_to_send / self.num_clients), 1)
 
         # TODO debugging on single client
-        # i think this every rtt coukd be considered "explicit" as needed
+        # i think this every rtt could be considered "explicit" as needed
         if self.num_clients > 0:
             #self.send_credits(int(credits_to_send))
             self.lazy_distribution(0)
@@ -76,25 +76,26 @@ class BreakwaterServer:
         client = self.state.all_clients[client_id]
         available_credits = self.total_credits - self.credits_issued
         # Cx_new = 0
+        Cx = client.c_unused + client.c_in_use
         if available_credits > 0:
             Cx_new = min(client.current_demand + self.overcommitment_credits,
-                         client.credits + available_credits)
+                         Cx + available_credits)
 
         elif available_credits < 0:
             # grab calculation from paper
             # demand + overcommitment is at least 1 (with 0 demand)
             # what if client is already at 0 credits?
             Cx_new = min(client.current_demand + self.overcommitment_credits,
-                         client.credits - 1)
+                         Cx - 1)
         else:
             # no credit updates needed
             return
         # possible for both situations to result in adding or subtracting credits, depending on
         # demand/pool?
 
-        credits_to_send = Cx_new - client.credits
+        credits_to_send = Cx_new - Cx
         # TODO debugging
-        debug = [self.state.timer.get_time(), credits_to_send, Cx_new, client.credits, client.current_demand, client_id]
+        debug = [self.state.timer.get_time(), credits_to_send, Cx_new, Cx, client.current_demand, client_id]
         self.debug_records.append(debug)
         self.send_credits_lazy(client, credits_to_send)
 
@@ -110,124 +111,30 @@ class BreakwaterServer:
                 self.credits_issued += 1
                 if client.add_credit():
                     credits_spent_at_once += 1
-            # this might be a bad record. Happens for every single task....
+            # this might be a bad record. Can happen for every single task....
             if self.state.config.record_requests_at_once:
                 requests_at_once_record.append(credits_spent_at_once)
                 self.requests_at_once.append(requests_at_once_record)
         elif credits_to_send < 0:
             credits_to_revoke = -credits_to_send
-            if client.credits < credits_to_revoke:
-                self.credits_issued -= client.credits
-                client.credits = 0
+            if client.c_unused < credits_to_revoke:
+                self.credits_issued -= client.c_unused
+                client.c_unused = 0
             else:
-                client.credits -= credits_to_revoke
+                client.c_unused -= credits_to_revoke
                 self.credits_issued -= credits_to_revoke
-
-    def send_credits(self, credits_to_send):
-
-        if credits_to_send > 0:
-            # idea 1: Might loop forever? but hopefully client
-            # would simply deregister without fail once it has 0 demand
-            # i = 0
-            # while i < credits_to_send:
-            #     if self.num_clients <= 0:
-            #         break
-            #     chosen_client = random.choice(self.clients)
-            #     if chosen_client.current_demand > 0:
-            #         chosen_client.add_credit()
-            #         self.credits_issued += 1
-            #         i += 1
-            #     else:
-            #         continue
-                
-
-            # idea 2: doesn't scale
-            # potential_clients = []
-            # for client in self.clients:
-            #     if client.current_demand > 0:
-            #         potential_clients.append(client)
-            # if len(potential_clients) > 0:
-            #     for i in range(credits_to_send):
-            #         chosen_client = random.choice(potential_clients)
-            #         chosen_client.add_credit()
-            #         self.credits_issued += 1
-
-            # idea 3, just give out credits regardless of demand?
-            # for i in range(credits_to_send):
-            #     chosen_client = random.choice(self.clients)
-            #     chosen_client.add_credit()
-            #     self.credits_issued += 1
-            # TODO attempting to fix distribution
-            i = 0
-            credits_spent_at_once = 0
-            # TODO checking value just in case while still using single client
-            requests_at_once_record = [credits_to_send, self.state.all_clients[0].current_demand]
-            while i < credits_to_send:
-                if self.num_clients <= 0:
-                    break
-                chosen_client_id = random.choice(self.available_client_ids)
-                chosen_client = self.state.all_clients[chosen_client_id]
-                Cx_new = min(chosen_client.current_demand + self.overcommitment_credits,
-                             chosen_client.credits + (self.total_credits - self.credits_issued))
-                if Cx_new - chosen_client.credits > 0:
-                    if chosen_client.add_credit():
-                        credits_spent_at_once += 1
-                    self.credits_issued += 1
-                    i += 1
-                else:
-                    # TODO for debugging purposes, client de registering is off right now
-                    # if our single client doesn't get any credits, just stop
-                    break
-            # maybe record this, but maybe also record
-            # maybe just recording client demand? like all the time?
-            # that's too much, every RTT maybe?
-            if self.state.config.record_requests_at_once:
-                requests_at_once_record.append(credits_spent_at_once)
-                self.requests_at_once.append(requests_at_once_record)
-
-        elif credits_to_send < 0:
-            """
-                When Ctotal decreases, the server does
-                not issue additional credits to the clients, or if the clients have
-                unused credits, the server sends negative credits to revoke the
-                credits issued earlier. 
-            """
-            # definitive number of tries
-            # probably won't revoke total number of credits, but, it does mimic
-            # the paper in that it attempts to revoke that number of credits.
-            for i in range(credits_to_send):
-                chosen_client_id = random.choice(self.available_client_ids)
-                chosen_client = self.state.all_clients[chosen_client_id]
-                if chosen_client.credits > 0:
-                    chosen_client.credits -= 1
-                    self.credits_issued -= 1
-
-            # paper implementation does not make sense for now
-            # would unfairly take away lots of credits from a single client,
-            # because we are not doing lazy distribution
-
-            # Cx_new = min(chosen_client.current_demand + self.overcommitment_credits,
-            #              chosen_client.credits - 1)
-            #
-            # credits_to_revoke = Cx_new - chosen_client.credits
-            # chosen_client.credits += credits_to_revoke
-            # # this should always be negative
-            # if credits_to_revoke >= 0:
-            #     raise ValueError('credits_to_revoke should never be positive, was {}'.format(credits_to_revoke))
-            # self.credits_issued += credits_to_revoke
 
     def client_register(self, client):
         self.available_client_ids.append(client.id)
         # TODO should this still happen if we are overloaded?
         self.credits_issued += 1
-        # client.credits += 1
         # now, client should be allowed to spend this credit
         client.add_credit()
         self.num_clients += 1
 
     def client_deregister(self, client):
         # credits yielded by client
-        self.credits_issued -= client.credits
+        self.credits_issued -= client.c_unused
 
         self.available_client_ids.remove(client.id)
         self.num_clients -= 1
