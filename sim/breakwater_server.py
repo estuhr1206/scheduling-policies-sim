@@ -76,7 +76,7 @@ class BreakwaterServer:
         client = self.state.all_clients[client_id]
         available_credits = self.total_credits - self.credits_issued
         # Cx_new = 0
-        Cx = client.c_unused + client.c_in_use
+        Cx = client.window
         if available_credits > 0:
             Cx_new = min(client.current_demand + self.overcommitment_credits,
                          Cx + available_credits)
@@ -85,6 +85,7 @@ class BreakwaterServer:
             # grab calculation from paper
             # demand + overcommitment is at least 1 (with 0 demand)
             # what if client is already at 0 credits?
+            # num pending?
             Cx_new = min(client.current_demand + self.overcommitment_credits,
                          Cx - 1)
         else:
@@ -92,45 +93,25 @@ class BreakwaterServer:
             return
         # possible for both situations to result in adding or subtracting credits, depending on
         # demand/pool?
-
-        credits_to_send = Cx_new - Cx
+        Cx_new = max(0, Cx_new)
+        diff = Cx_new - Cx
+        self.credits_issued += diff
         # TODO debugging
-        debug = [self.state.timer.get_time(), credits_to_send, Cx_new, Cx, client.current_demand, client_id]
+        debug = [self.state.timer.get_time(), diff, Cx_new, Cx, client.current_demand, client_id]
         self.debug_records.append(debug)
-        self.send_credits_lazy(client, credits_to_send)
 
-    def send_credits_lazy(self, client, credits_to_send):
-        # TODO not a real concept of "coalescing messages" here
-        # this will result in this code running for every single task: might add significant time to sim
-        if credits_to_send > 0:
-            # client might spend credit immediately, but that's ok
-            # is it bad that client gets these instantaneously for now? no RTT
-            credits_spent_at_once = 0
-            requests_at_once_record = [credits_to_send, client.current_demand]
-            for i in range(credits_to_send):
-                self.credits_issued += 1
-                if client.add_credit():
-                    credits_spent_at_once += 1
-            # this might be a bad record. Can happen for every single task....
-            if self.state.config.record_requests_at_once:
-                requests_at_once_record.append(credits_spent_at_once)
-                self.requests_at_once.append(requests_at_once_record)
-        elif credits_to_send < 0:
-            credits_to_revoke = -credits_to_send
-            if client.c_unused < credits_to_revoke:
-                self.credits_issued -= client.c_unused
-                client.c_unused = 0
-            else:
-                client.c_unused -= credits_to_revoke
-                self.credits_issued -= credits_to_revoke
+        # update window, and run client control loop
+        client.window = Cx_new
+        client.client_control_loop(from_server=True)
 
     def client_register(self, client):
         self.available_client_ids.append(client.id)
         # TODO should this still happen if we are overloaded?
         self.credits_issued += 1
         # now, client should be allowed to spend this credit
-        client.add_credit()
+        client.window = 1
         self.num_clients += 1
+        client.client_control_loop()
 
     def client_deregister(self, client):
         # credits yielded by client
