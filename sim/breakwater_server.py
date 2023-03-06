@@ -97,10 +97,15 @@ class BreakwaterServer:
         diff = Cx_new - Cx
         self.credits_issued += diff
         # TODO debugging
-        debug = [self.state.timer.get_time(), diff, Cx_new, Cx, client.current_demand, client_id]
-        self.debug_records.append(debug)
+        if diff != 0:
+            debug = [self.state.timer.get_time(), diff, Cx_new, Cx, client.current_demand, client_id]
+            self.debug_records.append(debug)
 
         # update window, and run client control loop
+        # TODO is any of this necessary if diff == 0?
+        # i.e. should client control loop occur even with no window change?
+        # it could still have a shift in credits in use, but is this giving it a
+        # chance to spend that it shouldn't have?
         client.window = Cx_new
         client.client_control_loop(from_server=True)
 
