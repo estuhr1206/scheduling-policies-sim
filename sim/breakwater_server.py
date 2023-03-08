@@ -5,7 +5,7 @@ import random
 
 class BreakwaterServer:
 
-    def __init__(self, RTT, ALPHA, BETA, TARGET_DELAY, state):
+    def __init__(self, RTT, ALPHA, BETA, TARGET_DELAY, MAX_CREDITS, state):
         self.state = state
         self.RTT = RTT
         self.target_delay = TARGET_DELAY
@@ -22,6 +22,7 @@ class BreakwaterServer:
 
         self.credit_pool_records = []
         self.requests_at_once = []
+        self.max_credits = MAX_CREDITS
 
         # TODO debugging
         self.debug_records = []
@@ -33,6 +34,8 @@ class BreakwaterServer:
 
         if max_delay < self.target_delay:
             self.total_credits += uppercase_alpha
+            if self.total_credits > self.max_credits:
+                self.total_credits = self.max_credits
         else:
             reduction = max(1.0 - self.BETA*((max_delay - self.target_delay)/self.target_delay), 0.5)
             self.total_credits = int(self.total_credits * reduction)

@@ -82,6 +82,7 @@ class SimConfig:
         self.BREAKWATER_TARGET_DELAY = 5000
         self.BREAKWATER_AGGRESSIVENESS_ALPHA = 0.001
         self.BREAKWATER_BETA = 0.02
+        self.MAX_CREDITS = 100
 
         # normal constants
         self.AVERAGE_SERVICE_TIME = 1000

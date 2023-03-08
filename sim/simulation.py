@@ -523,7 +523,7 @@ class Simulation:
 
         if self.config.record_cores_over_time:
             cores_over_time_file = open("{}cores_over_time.csv".format(new_dir_name), "w")
-            cores_over_time_file.write("Time,queues,threads\n")
+            cores_over_time_file.write("Time,Queues,Threads\n")
             for record in self.state.cores_over_time_records:
                 cores_over_time_file.write(",".join([str(x) for x in record]) + "\n")
             cores_over_time_file.close()

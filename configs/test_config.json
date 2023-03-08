@@ -1,5 +1,5 @@
 {
- "avg_system_load": 1.5,
+ "avg_system_load": 0.5,
  "num_queues": 32,
  "num_threads": 32,
  "mapping": [
@@ -78,6 +78,7 @@
  "bimodal_service_time": false,
  "join_bounded_shortest_queue": false,
  "record_queue_lens": true,
+ "MAX_CREDITS": 100,
  "RTT": 5000,
  "NUM_CLIENTS": 1,
  "BREAKWATER_TARGET_DELAY": 5000,
