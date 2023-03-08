@@ -17,7 +17,8 @@ class SimConfig:
                  ideal_reallocation=False, fred_reallocation=False, spin_parking_enabled=False, utilization_range_enabled=False,
                  allow_naive_idle=False, work_steal_park_enabled=False, bimodal_service_time=False, join_bounded_shortest_queue=False,
                  record_queue_lens=False, breakwater_enabled=False, record_breakwater_info=False,
-                 record_credit_pool=False, record_cores_at_drops=False, record_requests_at_once=False, record_cores_over_time=False):
+                 record_credit_pool=False, record_cores_at_drops=False, record_requests_at_once=False, record_cores_over_time=False,
+                 breakwater_debug_info=False):
 
         # Breakwater configuration
         self.breakwater_enabled = breakwater_enabled
@@ -26,6 +27,7 @@ class SimConfig:
         self.record_cores_at_drops = record_cores_at_drops
         self.record_requests_at_once = record_requests_at_once
         self.record_cores_over_time = record_cores_over_time
+        self.breakwater_debug_info = breakwater_debug_info
 
         # Basic configuration
         self.name = name
@@ -137,7 +139,7 @@ class SimConfig:
 
         # breakwater
         if (not self.breakwater_enabled) and (self.record_breakwater_info or self.record_credit_pool or self.record_cores_at_drops \
-                                                or self.record_requests_at_once):
+                                                or self.record_requests_at_once or self.breakwater_debug_info):
             print("A breakwater option is enabled without breakwater enabled")
             return False
 
