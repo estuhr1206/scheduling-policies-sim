@@ -32,6 +32,7 @@ class SimulationState:
         # breakwater variables
         self.all_clients = []
         self.breakwater_server = None
+        self.cores_over_time_records = []
 
         # Global stats
         self.overall_steal_count = 0
@@ -60,6 +61,10 @@ class SimulationState:
         self.attempted_flag_steals = 0
 
         self.config = config
+
+    def record_cores_over_time(self):
+        self.cores_over_time_records.append([self.timer.get_time(), len(self.available_queues), \
+                                             self.config.num_threads - len(self.parked_threads)])
 
     def max_queue_delay(self):
         """Returns the max delay across queues in the system, used in breakwater credit pool calculations/AQM"""

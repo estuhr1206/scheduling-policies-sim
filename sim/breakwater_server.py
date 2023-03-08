@@ -50,10 +50,9 @@ class BreakwaterServer:
         # how breakwater was actually implemented
         
         if self.state.config.record_credit_pool:
-            self.credit_pool_records.append([self.total_credits, self.credits_issued, self.overcommitment_credits])
+            self.credit_pool_records.append([self.state.timer.get_time(), self.total_credits, self.credits_issued, self.overcommitment_credits])
 
     def lazy_distribution(self, client_id):
-        # hmmmmmmm
         """
             for one client, this is easy and makes sense. We're just changing where the send credit call
             happens
