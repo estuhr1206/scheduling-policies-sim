@@ -36,9 +36,10 @@
  30,
  31
 ],
- "record_cores_over_time":true,
+ "breakwater_debug_info": false,
+ "record_cores_over_time": true,
  "record_credit_pool": true,
- "record_breakwater_info": true,
+ "record_breakwater_info": false,
  "record_cores_at_drops": false,
  "record_requests_at_once": false,
  "breakwater_enabled": true,
