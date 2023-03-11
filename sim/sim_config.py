@@ -17,7 +17,8 @@ class SimConfig:
                  ideal_reallocation=False, fred_reallocation=False, spin_parking_enabled=False, utilization_range_enabled=False,
                  allow_naive_idle=False, work_steal_park_enabled=False, bimodal_service_time=False, join_bounded_shortest_queue=False,
                  record_queue_lens=False, breakwater_enabled=False, record_breakwater_info=False,
-                 record_credit_pool=False, record_cores_at_drops=False, record_requests_at_once=False):
+                 record_credit_pool=False, record_cores_at_drops=False, record_requests_at_once=False, record_cores_over_time=False,
+                 breakwater_debug_info=False):
 
         # Breakwater configuration
         self.breakwater_enabled = breakwater_enabled
@@ -25,6 +26,8 @@ class SimConfig:
         self.record_credit_pool = record_credit_pool
         self.record_cores_at_drops = record_cores_at_drops
         self.record_requests_at_once = record_requests_at_once
+        self.record_cores_over_time = record_cores_over_time
+        self.breakwater_debug_info = breakwater_debug_info
 
         # Basic configuration
         self.name = name
@@ -81,6 +84,7 @@ class SimConfig:
         self.BREAKWATER_TARGET_DELAY = 5000
         self.BREAKWATER_AGGRESSIVENESS_ALPHA = 0.001
         self.BREAKWATER_BETA = 0.02
+        self.MAX_CREDITS = 100
 
         # normal constants
         self.AVERAGE_SERVICE_TIME = 1000
@@ -132,6 +136,13 @@ class SimConfig:
     def validate(self):
         """Validate configuration parameters."""
         # TODO: Update this for accuracy
+
+        # breakwater
+        if (not self.breakwater_enabled) and (self.record_breakwater_info or self.record_credit_pool or self.record_cores_at_drops \
+                                                or self.record_requests_at_once or self.breakwater_debug_info):
+            print("A breakwater option is enabled without breakwater enabled")
+            return False
+
         if self.num_queues == 0 or self.num_threads == 0:
             print("There must be nonzero queues and threads")
             return False

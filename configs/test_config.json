@@ -1,5 +1,5 @@
 {
- "avg_system_load": 1.0,
+ "avg_system_load": 0.5,
  "num_queues": 32,
  "num_threads": 32,
  "mapping": [
@@ -36,10 +36,11 @@
  30,
  31
 ],
+ "record_cores_over_time":true,
  "record_credit_pool": true,
  "record_breakwater_info": true,
- "record_cores_at_drops": true,
- "record_requests_at_once": true,
+ "record_cores_at_drops": false,
+ "record_requests_at_once": false,
  "breakwater_enabled": true,
  "load_thread_count": 32,
  "num_tasks": null,
@@ -77,6 +78,7 @@
  "bimodal_service_time": false,
  "join_bounded_shortest_queue": false,
  "record_queue_lens": true,
+ "MAX_CREDITS": 100,
  "RTT": 5000,
  "NUM_CLIENTS": 1,
  "BREAKWATER_TARGET_DELAY": 5000,

@@ -93,9 +93,12 @@ class Simulation:
                 self.reallocate_threads()
 
             # Every x us, check for threads to park
+            # adding in recording of number of cores currently allocated for breakwater
             elif self.config.parking_enabled and not self.config.reallocation_replay and \
                     self.state.timer.get_time() % self.config.CORE_REALLOCATION_TIMER == 0:
                 self.reallocate_threads()
+                if self.config.record_cores_over_time:
+                    self.state.record_cores_over_time()
 
             # Reallocation replay
             elif self.config.reallocation_replay:
@@ -517,6 +520,15 @@ class Simulation:
             qlen_file.close()
 
         # breakwater
+
+        if self.config.record_cores_over_time:
+            cores_over_time_file = open("{}cores_over_time.csv".format(new_dir_name), "w")
+            cores_over_time_file.write("Time,Queues,Threads\n")
+            for record in self.state.cores_over_time_records:
+                cores_over_time_file.write(",".join([str(x) for x in record]) + "\n")
+            cores_over_time_file.close()
+
+        # breakwater enabled only
         if self.config.record_breakwater_info:
             breakwater_info_file = open("{}breakwater_info.csv".format(new_dir_name), "w")
             breakwater_info_file.write("Total Tasks,Dropped Tasks,Immediate Tasks\n")
@@ -527,7 +539,7 @@ class Simulation:
 
         if self.config.record_credit_pool:
             credit_pool_file = open("{}credit_pool.csv".format(new_dir_name), "w")
-            credit_pool_file.write("Total Credits,Credits Issued,Overcommitment Credits\n")
+            credit_pool_file.write("Time,Total Credits,Credits Issued,Overcommitment Credits\n")
             for record in self.state.breakwater_server.credit_pool_records:
                 credit_pool_file.write(",".join([str(x) for x in record]) + "\n")
             credit_pool_file.close()
@@ -545,6 +557,14 @@ class Simulation:
             for record in self.state.breakwater_server.requests_at_once:
                 requests_at_once_file.write(",".join([str(x) for x in record]) + "\n")
             requests_at_once_file.close()
+
+        # TODO debugging
+        if self.config.breakwater_debug_info:
+            debugging_file = open("{}debugging.csv".format(new_dir_name), "w")
+            debugging_file.write("Time,Credits To Send,Cx_new,Client Credits,Client Demand,Client ID\n")
+            for record in self.state.breakwater_server.debug_records:
+                debugging_file.write(",".join([str(x) for x in record]) + "\n")
+            debugging_file.close()
 
 
 

@@ -37,6 +37,9 @@ class Task:
         self.to_enqueue = None
         self.front_task_time = 0
 
+        # breakwater
+        self.source_client = None
+
         self.config = config
         self.state = state
 
@@ -71,6 +74,10 @@ class Task:
         """Complete the task and do any necessary accounting."""
         # Want to track how many vanilla tasks get completed
         self.state.complete_task_count += 1
+        # breakwater
+        if self.config.breakwater_enabled:
+            self.state.all_clients[self.source_client].c_in_use -= 1
+            self.state.breakwater_server.lazy_distribution(self.source_client)
 
     def is_zero_duration(self):
         """True if the task has zero service time."""

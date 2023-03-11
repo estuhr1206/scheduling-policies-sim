@@ -5,7 +5,7 @@ import random
 
 class BreakwaterServer:
 
-    def __init__(self, RTT, ALPHA, BETA, TARGET_DELAY, state):
+    def __init__(self, RTT, ALPHA, BETA, TARGET_DELAY, MAX_CREDITS, state):
         self.state = state
         self.RTT = RTT
         self.target_delay = TARGET_DELAY
@@ -13,7 +13,8 @@ class BreakwaterServer:
         self.credits_issued = 0
         # this will get updated by register
         self.num_clients = 0
-        self.clients = []
+        # update clients to be indices, not actual clients, allowing clients to be identified
+        self.available_client_ids = []
         self.AGGRESSIVENESS_ALPHA = ALPHA
         self.BETA = BETA
         self.overcommitment_credits = 0
@@ -21,9 +22,10 @@ class BreakwaterServer:
 
         self.credit_pool_records = []
         self.requests_at_once = []
+        self.max_credits = MAX_CREDITS
 
-        # TODO remove, debugging
-        self.counter = 0
+        # TODO debugging
+        self.debug_records = []
 
     def control_loop(self, max_delay=0):
         self.max_delay = max_delay
@@ -32,6 +34,8 @@ class BreakwaterServer:
 
         if max_delay < self.target_delay:
             self.total_credits += uppercase_alpha
+            if self.total_credits > self.max_credits:
+                self.total_credits = self.max_credits
         else:
             reduction = max(1.0 - self.BETA*((max_delay - self.target_delay)/self.target_delay), 0.5)
             self.total_credits = int(self.total_credits * reduction)
@@ -40,134 +44,87 @@ class BreakwaterServer:
         # overcommitment seems to allow massive amounts of credits to build up at client
         self.overcommitment_credits = max(int(credits_to_send / self.num_clients), 1)
 
-        # TODO remove, debugging
-        # self.counter += 1
-        # if self.counter >= 1000:
-        #     print("max_delay: {0}, pool: {1}, credits to send: {2}. overcommit: {3}".format(
-        #         max_delay, self.total_credits, credits_to_send, self.overcommitment_credits
-        #     ))
-        #     self.counter = 0
-
+        # TODO debugging on single client
+        # i think this every rtt could be considered "explicit" as needed
         if self.num_clients > 0:
-            self.send_credits(int(credits_to_send))
-        # TODO I think it should be interesting to see the credit pool both before and after
-        # there is an attempt to issue the credits?
+            #self.send_credits(int(credits_to_send))
+            self.lazy_distribution(0)
+        # update: credits will now be sent upon task completion to better emulate
+        # how breakwater was actually implemented
+        
         if self.state.config.record_credit_pool:
-            self.credit_pool_records.append([self.total_credits, self.credits_issued, self.overcommitment_credits])
+            self.credit_pool_records.append([self.state.timer.get_time(), self.total_credits, self.credits_issued, self.overcommitment_credits])
 
-    def send_credits(self, credits_to_send):
+    def lazy_distribution(self, client_id):
+        """
+            for one client, this is easy and makes sense. We're just changing where the send credit call
+            happens
 
-        if credits_to_send > 0:
-            # idea 1: Might loop forever? but hopefully client
-            # would simply deregister without fail once it has 0 demand
-            # i = 0
-            # while i < credits_to_send:
-            #     if self.num_clients <= 0:
-            #         break
-            #     chosen_client = random.choice(self.clients)
-            #     if chosen_client.current_demand > 0:
-            #         chosen_client.add_credit()
-            #         self.credits_issued += 1
-            #         i += 1
-            #     else:
-            #         continue
-                
+            For multiple clients, it's a bit more hairy.
+            Or is it???
 
-            # idea 2: doesn't scale
-            # potential_clients = []
-            # for client in self.clients:
-            #     if client.current_demand > 0:
-            #         potential_clients.append(client)
-            # if len(potential_clients) > 0:
-            #     for i in range(credits_to_send):
-            #         chosen_client = random.choice(potential_clients)
-            #         chosen_client.add_credit()
-            #         self.credits_issued += 1
+            actually, the whole thing is more that we don't really need a "send credit" method
+            or at least, not in its current state, choosing random clients and such.
 
-            # idea 3, just give out credits regardless of demand?
-            # for i in range(credits_to_send):
-            #     chosen_client = random.choice(self.clients)
-            #     chosen_client.add_credit()
-            #     self.credits_issued += 1
-            # TODO attempting to fix distribution
-            i = 0
-            credits_spent_at_once = 0
-            # TODO checking value just in case while still using single client
-            requests_at_once_record = [credits_to_send, self.state.all_clients[0].current_demand]
-            while i < credits_to_send:
-                if self.num_clients <= 0:
-                    break
-                chosen_client = random.choice(self.clients)
-                Cx_new = min(chosen_client.current_demand + self.overcommitment_credits,
-                             chosen_client.credits + (self.total_credits - self.credits_issued))
-                if Cx_new - chosen_client.credits > 0:
-                    if chosen_client.add_credit():
-                        credits_spent_at_once += 1
-                    self.credits_issued += 1
-                    i += 1
-                else:
-                    # TODO for debugging purposes, client de registering is off right now
-                    # if our single client doesn't get any credits, just stop
-                    break
-            # maybe record this, but maybe also record
-            # maybe just recording client demand? like all the time?
-            # that's too much, every RTT maybe?
-            if self.state.config.record_requests_at_once:
-                requests_at_once_record.append(credits_spent_at_once)
-                self.requests_at_once.append(requests_at_once_record)
+            issue
+            if demand is sky high, won't a single client eat up all available credits?
+            how does this ever become fair?
+            Won't that single client then also have more opportunities (more responses to task
+            completions) to get more credits and have a feedback loop?
 
-        elif credits_to_send < 0:
-            """
-                When Ctotal decreases, the server does
-                not issue additional credits to the clients, or if the clients have
-                unused credits, the server sends negative credits to revoke the
-                credits issued earlier. 
-            """
-            # definitive number of tries
-            # probably won't revoke total number of credits, but, it does mimic
-            # the paper in that it attempts to revoke that number of credits.
-            for i in range(credits_to_send):
-                chosen_client = random.choice(self.clients)
-                if chosen_client.credits > 0:
-                    chosen_client.credits -= 1
-                    self.credits_issued -= 1
+            TODO but not a big deal for now
 
-            # paper implementation does not make sense for now
-            # would unfairly take away lots of credits from a single client,
-            # because we are not doing lazy distribution
+        """
+        client = self.state.all_clients[client_id]
+        available_credits = self.total_credits - self.credits_issued
+        # Cx_new = 0
+        Cx = client.window
+        if available_credits > 0:
+            Cx_new = min(client.current_demand + self.overcommitment_credits,
+                         Cx + available_credits)
 
-            # Cx_new = min(chosen_client.current_demand + self.overcommitment_credits,
-            #              chosen_client.credits - 1)
-            #
-            # credits_to_revoke = Cx_new - chosen_client.credits
-            # chosen_client.credits += credits_to_revoke
-            # # this should always be negative
-            # if credits_to_revoke >= 0:
-            #     raise ValueError('credits_to_revoke should never be positive, was {}'.format(credits_to_revoke))
-            # self.credits_issued += credits_to_revoke
+        elif available_credits < 0:
+            # grab calculation from paper
+            # demand + overcommitment is at least 1 (with 0 demand)
+            # what if client is already at 0 credits?
+            # num pending?
+            Cx_new = min(client.current_demand + self.overcommitment_credits,
+                         Cx - 1)
+        else:
+            # no credit updates needed
+            return
+        # possible for both situations to result in adding or subtracting credits, depending on
+        # demand/pool?
+        Cx_new = max(0, Cx_new)
+        diff = Cx_new - Cx
+        self.credits_issued += diff
+        # TODO debugging
+        if diff != 0:
+            debug = [self.state.timer.get_time(), diff, Cx_new, Cx, client.current_demand, client_id]
+            self.debug_records.append(debug)
+
+        # update window, and run client control loop
+        # TODO is any of this necessary if diff == 0?
+        # i.e. should client control loop occur even with no window change?
+        # it could still have a shift in credits in use, but is this giving it a
+        # chance to spend that it shouldn't have?
+        client.window = Cx_new
+        client.client_control_loop(from_server=True)
 
     def client_register(self, client):
-        self.clients.append(client)
-        # TODO client receives credit upon register
-        # should this still not happen if we are overloaded?
+        self.available_client_ids.append(client.id)
+        # TODO should this still happen if we are overloaded?
         self.credits_issued += 1
-        client.credits += 1
+        # now, client should be allowed to spend this credit
+        client.window = 1
         self.num_clients += 1
-        """
-            credit distribution should not be instantaneous, even if there were credits to grant
-            to this client.
-
-            It should happen when the control loop runs, every RTT. 
-            normally, credits could be sent on the register response, but we don't really have a concept of this here
-
-            the next RTT truly is the soonest that response could arrive regardless
-        """
+        client.client_control_loop()
 
     def client_deregister(self, client):
         # credits yielded by client
-        self.credits_issued -= client.credits
+        self.credits_issued -= client.c_unused
 
-        self.clients.remove(client)
+        self.available_client_ids.remove(client.id)
         self.num_clients -= 1
 
 
