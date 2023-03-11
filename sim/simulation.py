@@ -410,6 +410,8 @@ class Simulation:
                 
                 next_arrival is checked here already, so this should cover all cases
                 in which breakwater would have any actions to perform
+
+                even with lazy distribution, next_completion_time should cover this
             """
             next_breakwater = self.find_next_breakwater_control_loop()
             upcoming_events.append(next_breakwater)
@@ -565,6 +567,13 @@ class Simulation:
             for record in self.state.breakwater_server.debug_records:
                 debugging_file.write(",".join([str(x) for x in record]) + "\n")
             debugging_file.close()
+        
+        if self.config.varyload_over_time:
+            varyload_over_time_file = open("{}varyload_over_time.csv".format(new_dir_name), "w")
+            varyload_over_time_file.write("Time,Load,Request Rate\n")
+            for record in self.state.varyload_over_time_records:
+                varyload_over_time_file.write(",".join([str(x) for x in record]) + "\n")
+            varyload_over_time_file.close()
 
 
 

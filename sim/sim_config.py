@@ -18,7 +18,7 @@ class SimConfig:
                  allow_naive_idle=False, work_steal_park_enabled=False, bimodal_service_time=False, join_bounded_shortest_queue=False,
                  record_queue_lens=False, breakwater_enabled=False, record_breakwater_info=False,
                  record_credit_pool=False, record_cores_at_drops=False, record_requests_at_once=False, record_cores_over_time=False,
-                 breakwater_debug_info=False):
+                 breakwater_debug_info=False, varyload_over_time=False):
 
         # Breakwater configuration
         self.breakwater_enabled = breakwater_enabled
@@ -28,6 +28,8 @@ class SimConfig:
         self.record_requests_at_once = record_requests_at_once
         self.record_cores_over_time = record_cores_over_time
         self.breakwater_debug_info = breakwater_debug_info
+
+        self.varyload_over_time = varyload_over_time
 
         # Basic configuration
         self.name = name

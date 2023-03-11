@@ -79,6 +79,11 @@ class BreakwaterClient:
                 actually, that seems ok, because then when it gets a task, it can try to use the excess
                 we'll see
                 this means client knows it failed immediately, effectively gets a free retry
+
+                or at least, gets to reuse these credits the next time control loop gets called,
+                which could be very often with short service times/few clients
+
+                could be dumping lots of tasks at once: bad
             """
             self.c_in_use -= 1
             self.dropped_tasks += 1

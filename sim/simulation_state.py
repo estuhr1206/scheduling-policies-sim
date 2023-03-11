@@ -33,6 +33,7 @@ class SimulationState:
         self.all_clients = []
         self.breakwater_server = None
         self.cores_over_time_records = []
+        self.varyload_over_time_records = []
 
         # Global stats
         self.overall_steal_count = 0
@@ -398,13 +399,35 @@ class SimulationState:
             This likely causes high delay at the queues, because of this very jagged
             enqueuing every RTT by the client
         """
-        request_rate = config.avg_system_load * config.load_thread_count / config.AVERAGE_SERVICE_TIME
+        # sim duration typically .1s, aka 100,000,000 ns
+        if config.varyload_over_time:
+            interval_list = []
+            interval_increment = config.sim_duration / 5
+            interval_value = interval_increment
+            for temp_i in range(5):
+                interval_list.append(interval_value)
+                interval_value += interval_increment
+            loads = [0.5, 0.8, 1.4, 0.8, 0.5]
+            current_interval = 0
+            request_rate = loads[current_interval] * config.load_thread_count / config.AVERAGE_SERVICE_TIME
+            self.varyload_over_time_records.append([0, loads[current_interval], request_rate])
+        else:
+            request_rate = config.avg_system_load * config.load_thread_count / config.AVERAGE_SERVICE_TIME
+
         next_task_time = int(1/request_rate) if config.regular_arrivals else int(random.expovariate(request_rate))
         if config.bimodal_service_time:
             distribution = [500] * 9 + [5500]
         i = 0
         while (config.sim_duration is None or next_task_time < config.sim_duration) and \
                 (config.num_tasks is None or i < config.num_tasks):
+            if config.varyload_over_time:
+                if next_task_time >= interval_list[current_interval]:
+                    current_interval += 1
+                    request_rate = loads[current_interval] * config.load_thread_count / config.AVERAGE_SERVICE_TIME
+                    # because this is in init, next_task_time serves as an approximation of the time of the sim
+                    # where this shift in load will be seen. It dictates the first arrival of tasks at this new rate
+                    self.varyload_over_time_records.append([next_task_time, loads[current_interval], request_rate])
+            
             service_time = None
             while service_time is None or service_time == 0:
                 if config.constant_service_time:
