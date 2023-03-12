@@ -29,6 +29,8 @@ class BreakwaterClient:
         self.cores_at_drops = []
         self.tasks_spent_control_loop = 0
 
+        self.dropped_credits = 0
+
         self.id = identifier
 
     def enqueue_task(self, task):
@@ -87,6 +89,7 @@ class BreakwaterClient:
             """
             self.c_in_use -= 1
             self.dropped_tasks += 1
+            self.dropped_credits += 1
             if self.state.config.record_cores_at_drops:
                 self.cores_at_drops.append([self.state.timer.get_time(), len(self.state.available_queues)])
                 # breakwater = self.state.breakwater_server
@@ -102,7 +105,7 @@ class BreakwaterClient:
     def client_control_loop(self, from_server=False):
         if self.current_demand < 0:
                 raise ValueError('error, demand was below 0')
-        self.c_unused = self.window - self.c_in_use
+        self.c_unused = self.window - (self.c_in_use + self.dropped_credits)
         while self.current_demand > 0 and self.c_unused > 0:
             if from_server:
                 self.tasks_spent_control_loop += 1
@@ -115,7 +118,8 @@ class BreakwaterClient:
     # simplify debugging, don't deregister
     def deregister(self):
         # important that this call to server is first, as it will take back credits the client currently has
-        self.c_unused = self.window - self.c_in_use
+        # I think it should just be window that gets subtracted from issued
+        #self.c_unused = self.window - self.c_in_use
         self.state.breakwater_server.client_deregister(self)
         self.registered = False
         self.c_unused = 0

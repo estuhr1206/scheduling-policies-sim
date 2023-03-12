@@ -43,11 +43,12 @@ class BreakwaterServer:
         credits_to_send = self.total_credits - self.credits_issued
         # overcommitment seems to allow massive amounts of credits to build up at client
         self.overcommitment_credits = max(int(credits_to_send / self.num_clients), 1)
-
-        # TODO debugging on single client
+        
+        # TODO debugging on single client, needs to be adjusted to multiple clients
         # i think this every rtt could be considered "explicit" as needed
         if self.num_clients > 0:
             #self.send_credits(int(credits_to_send))
+            self.state.all_clients[0].dropped_credits = 0
             self.lazy_distribution(0)
         # update: credits will now be sent upon task completion to better emulate
         # how breakwater was actually implemented
@@ -122,7 +123,8 @@ class BreakwaterServer:
 
     def client_deregister(self, client):
         # credits yielded by client
-        self.credits_issued -= client.c_unused
+        # should this just be window?
+        self.credits_issued -= client.window
 
         self.available_client_ids.remove(client.id)
         self.num_clients -= 1
