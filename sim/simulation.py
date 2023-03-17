@@ -86,6 +86,11 @@ class Simulation:
                 max_delay = self.state.max_queue_delay()
                 self.state.breakwater_server.control_loop(max_delay)
 
+            if self.config.record_throughput_over_time and self.state.timer.get_time() % self.config.THROUGHPUT_TIMER == 0:
+                current_throughput = (self.state.current_completed_tasks / self.config.THROUGHPUT_TIMER) * 10**9
+                self.state.throughput_records.append([self.state.timer.get_time(), current_throughput])
+                self.state.current_completed_tasks = 0
+
             # Reallocations
             # Continuously check for reallocations
             if self.config.parking_enabled and self.config.always_check_realloc and\
@@ -328,6 +333,13 @@ class Simulation:
         # next is the next time as per the timer, rather than how many ns in the future the event is
         next_control_loop = (math.floor(self.state.timer.get_time() / self.config.RTT) + 1) * self.config.RTT
         return next_control_loop
+    def find_next_throughput(self):
+        """Mimicking the find next alloc code, as breakwater runs its control loop every RTT, similar
+        to how reallocations happen every CORE_REALLOCATION_TIMER
+        """
+        # next is the next time as per the timer, rather than how many ns in the future the event is
+        next_throughput = (math.floor(self.state.timer.get_time() / self.config.THROUGHPUT_TIMER) + 1) * self.config.THROUGHPUT_TIMER
+        return next_throughput
 
     def find_next_arrival_and_alloc(self, task_number, allocation_number):
         """Determine the next task arrival and allocation decision.
@@ -415,6 +427,9 @@ class Simulation:
             """
             next_breakwater = self.find_next_breakwater_control_loop()
             upcoming_events.append(next_breakwater)
+        if self.config.record_throughput_over_time:
+            next_throughput = self.find_next_throughput()
+            upcoming_events.append(next_throughput)
         if not any(upcoming_events):
             next_event = self.state.timer.get_time() + 1
         else:
@@ -529,6 +544,13 @@ class Simulation:
             for record in self.state.cores_over_time_records:
                 cores_over_time_file.write(",".join([str(x) for x in record]) + "\n")
             cores_over_time_file.close()
+        
+        if self.config.record_throughput_over_time:
+            throughput_over_time_file = open("{}throughput_over_time.csv".format(new_dir_name), "w")
+            throughput_over_time_file.write("Time,Throughput\n")
+            for record in self.state.throughput_records:
+                throughput_over_time_file.write(",".join([str(x) for x in record]) + "\n")
+            throughput_over_time_file.close()
 
         # breakwater enabled only
         if self.config.record_breakwater_info:

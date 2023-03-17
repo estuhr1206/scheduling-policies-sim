@@ -74,6 +74,7 @@ class Task:
         """Complete the task and do any necessary accounting."""
         # Want to track how many vanilla tasks get completed
         self.state.complete_task_count += 1
+        self.state.current_completed_tasks += 1
         # breakwater
         if self.config.breakwater_enabled:
             self.state.all_clients[self.source_client].c_in_use -= 1

@@ -35,6 +35,9 @@ class SimulationState:
         self.cores_over_time_records = []
         self.varyload_over_time_records = []
 
+        self.throughput_records = []
+        self.current_completed_tasks = 0
+
         # Global stats
         self.overall_steal_count = 0
         self.flag_steal_count = 0
@@ -402,12 +405,14 @@ class SimulationState:
         # sim duration typically .1s, aka 100,000,000 ns
         if config.varyload_over_time:
             interval_list = []
-            interval_increment = config.sim_duration / 5
+            loads = [0.2, 0.4, 0.6, 0.8]
+            # loads = [0.2, 0.5, 1.4]
+            interval_increment = config.sim_duration / len(loads)
             interval_value = interval_increment
-            for temp_i in range(5):
+            for temp_i in range(len(loads)):
                 interval_list.append(interval_value)
                 interval_value += interval_increment
-            loads = [0.5, 0.8, 1.4, 0.8, 0.5]
+            
             current_interval = 0
             request_rate = loads[current_interval] * config.load_thread_count / config.AVERAGE_SERVICE_TIME
             self.varyload_over_time_records.append([0, loads[current_interval], request_rate])

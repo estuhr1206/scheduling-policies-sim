@@ -33,6 +33,7 @@ if __name__ == "__main__":
     threads = []
     cores = None
     targets = None
+    RTTs = None
     description = ""
 
     path_to_sim = os.path.relpath(pathlib.Path(__file__).resolve().parents[1], start=os.curdir)
@@ -48,10 +49,20 @@ if __name__ == "__main__":
         if "-varytarget" in sys.argv:
             print("can't have varytarget and varycores both enabled")
             exit(1)
+        if "-varyRTT" in sys.argv:
+            print("can't have varyRTT and varycores both enabled")
+            exit(1)
 
     if "-varytarget" in sys.argv:
         targets = [5000, 8000, 10000, 12000, 15000]
         sys.argv.remove("-varytarget")
+        if "-varyRTT" in sys.argv:
+            print("can't have varyRTT and varytarget both enabled")
+            exit(1)
+
+    if "-varyRTT" in sys.argv:
+        RTTs = [5000, 10000, 15000, 20000, 25000, 30000, 35000, 40000]
+        sys.argv.remove("-varyRTT")
 
     if len(sys.argv) > 2:
         name = SINGLE_THREAD_SIM_NAME_FORMAT.format(os.uname().nodename, time)
@@ -96,6 +107,26 @@ if __name__ == "__main__":
                     name_parts = cfg.reallocation_record.split("_", 1)
                     cfg.reallocation_record = MULTI_THREAD_SIM_NAME_FORMAT.format(name_parts[0], name_parts[1], i)
                 cfg.BREAKWATER_TARGET_DELAY = target
+                cfg.name = name
+                cfg.progress_bar = (i == 0)
+                cfg.description = description
+
+            else:
+                print("Missing or invalid argument")
+                exit(1)
+
+            threads.append(SimProcess(i, name, cfg, path_to_sim))
+
+    elif RTTs is not None:
+        for i, RTT in enumerate(RTTs):
+            name = MULTI_THREAD_SIM_NAME_FORMAT.format(os.uname().nodename, time, i)
+
+            if os.path.isfile(sys.argv[1]):
+                cfg = json.loads(cfg_json, object_hook=SimConfig.decode_object)
+                if cfg.reallocation_replay:
+                    name_parts = cfg.reallocation_record.split("_", 1)
+                    cfg.reallocation_record = MULTI_THREAD_SIM_NAME_FORMAT.format(name_parts[0], name_parts[1], i)
+                cfg.RTT = RTT
                 cfg.name = name
                 cfg.progress_bar = (i == 0)
                 cfg.description = description

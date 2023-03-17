@@ -36,6 +36,7 @@
  30,
  31
 ],
+ "record_throughput_over_time":true,
  "record_cores_over_time":true,
  "record_credit_pool": true,
  "record_breakwater_info": true,
@@ -80,6 +81,7 @@
  "bimodal_service_time": false,
  "join_bounded_shortest_queue": false,
  "record_queue_lens": true,
+ "THROUGHPUT_TIMER": 5000,
  "MAX_CREDITS": 100,
  "RTT": 5000,
  "NUM_CLIENTS": 1,
