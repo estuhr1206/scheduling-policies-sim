@@ -18,7 +18,8 @@ class SimConfig:
                  allow_naive_idle=False, work_steal_park_enabled=False, bimodal_service_time=False, join_bounded_shortest_queue=False,
                  record_queue_lens=False, breakwater_enabled=False, record_breakwater_info=False,
                  record_credit_pool=False, record_cores_at_drops=False, record_requests_at_once=False, record_cores_over_time=False,
-                 breakwater_debug_info=False, varyload_over_time=False, record_throughput_over_time=False):
+                 breakwater_debug_info=False, varyload_over_time=False, record_throughput_over_time=False, no_drops=False,
+                 request_timeout=False):
 
         # Breakwater configuration
         self.breakwater_enabled = breakwater_enabled
@@ -27,6 +28,8 @@ class SimConfig:
         self.record_cores_at_drops = record_cores_at_drops
         self.record_requests_at_once = record_requests_at_once
         self.breakwater_debug_info = breakwater_debug_info
+        self.no_drops = no_drops
+        self.request_timeout = request_timeout
 
         self.varyload_over_time = varyload_over_time
         self.record_cores_over_time = record_cores_over_time
@@ -82,6 +85,7 @@ class SimConfig:
         # Constants
 
         # breakwater constants
+        self.CLIENT_TIMEOUT = 100000
         self.RTT = 5000
         self.NUM_CLIENTS = 1
         self.BREAKWATER_TARGET_DELAY = 5000

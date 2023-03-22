@@ -25,6 +25,7 @@ class BreakwaterClient:
         self.registered = False
         self.state = state
         self.dropped_tasks = 0
+        self.timed_out_tasks = 0
         self.total_tasks = 0
         self.cores_at_drops = []
         self.tasks_spent_control_loop = 0
@@ -66,6 +67,9 @@ class BreakwaterClient:
         chosen_queue = random.choice(self.state.available_queues)
         # delay = self.state.queues[chosen_queue].current_delay()
         delay = self.state.max_queue_delay()
+        if self.state.config.no_drops:
+            # allow enqueue to occur no matter what
+            delay = 0
         if delay <= 2 * self.state.config.BREAKWATER_TARGET_DELAY:
             # need to override arrival time for core usage
             # this is ok, because the arrival time usage for enqueuing at clients occurs before this
@@ -105,6 +109,14 @@ class BreakwaterClient:
     def client_control_loop(self, from_server=False):
         if self.current_demand < 0:
                 raise ValueError('error, demand was below 0')
+        if self.state.config.request_timeout:
+            while self.current_demand > 0:
+                current_task = self.queue[0]
+                if current_task.arrival_time + self.config.CLIENT_TIMEOUT >= self.state.timer.get_time():
+                    self.queue.popleft()
+                    self.current_demand -= 1
+                    self.timed_out_tasks += 1
+
         self.c_unused = self.window - (self.c_in_use + self.dropped_credits)
         while self.current_demand > 0 and self.c_unused > 0:
             if from_server:
