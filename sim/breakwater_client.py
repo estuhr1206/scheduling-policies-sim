@@ -112,10 +112,12 @@ class BreakwaterClient:
         if self.state.config.request_timeout:
             while self.current_demand > 0:
                 current_task = self.queue[0]
-                if current_task.arrival_time + self.config.CLIENT_TIMEOUT >= self.state.timer.get_time():
+                if current_task.arrival_time <= self.state.timer.get_time() - self.state.config.CLIENT_TIMEOUT:
                     self.queue.popleft()
                     self.current_demand -= 1
                     self.timed_out_tasks += 1
+                else:
+                    break
 
         self.c_unused = self.window - (self.c_in_use + self.dropped_credits)
         while self.current_demand > 0 and self.c_unused > 0:

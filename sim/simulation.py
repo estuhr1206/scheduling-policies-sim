@@ -555,10 +555,10 @@ class Simulation:
         # breakwater enabled only
         if self.config.record_breakwater_info:
             breakwater_info_file = open("{}breakwater_info.csv".format(new_dir_name), "w")
-            breakwater_info_file.write("Total Tasks,Dropped Tasks,Immediate Tasks\n")
+            breakwater_info_file.write("ID,Total Tasks,Dropped Tasks,Immediate Tasks,Timed Out Tasks\n")
             for client in self.state.all_clients:
-                breakwater_info_file.write("{},{},{}\n".format(client.total_tasks, client.dropped_tasks,
-                                                               client.tasks_spent_control_loop))
+                breakwater_info_file.write("{},{},{},{},{}\n".format(client.id, client.total_tasks, client.dropped_tasks,
+                                                               client.tasks_spent_control_loop, client.timed_out_tasks))
             breakwater_info_file.close()
 
         if self.config.record_credit_pool:
