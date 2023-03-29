@@ -48,7 +48,7 @@ class BreakwaterServer:
         # i think this every rtt could be considered "explicit" as needed
         if self.num_clients > 0:
             #self.send_credits(int(credits_to_send))
-            self.state.all_clients[0].dropped_credits = 0
+            # self.state.all_clients[0].dropped_credits = 0
             self.lazy_distribution(0)
         # update: credits will now be sent upon task completion to better emulate
         # how breakwater was actually implemented
@@ -101,7 +101,7 @@ class BreakwaterServer:
         self.credits_issued += diff
         # TODO debugging
         if diff != 0:
-            debug = [self.state.timer.get_time(), diff, Cx_new, Cx, client.current_demand, client_id]
+            debug = [self.state.timer.get_time(), self.total_credits, diff, Cx_new, Cx, client.dropped_credits, client.current_demand, client_id]
             self.debug_records.append(debug)
 
         # update window, and run client control loop

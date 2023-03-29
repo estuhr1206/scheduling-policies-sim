@@ -82,6 +82,11 @@ class Simulation:
                 task_number += 1
 
             # breakwater
+            # restore dropped
+            if self.config.breakwater_enabled and self.state.timer.get_time() % 1000 == 0:
+                for client_id in self.state.breakwater_server.available_client_ids:
+                    self.state.all_clients[client_id].restore_dropped_credits()
+            # server control loop
             if self.config.breakwater_enabled and self.state.timer.get_time() % self.config.RTT == 0:
                 max_delay = self.state.max_queue_delay()
                 self.state.breakwater_server.control_loop(max_delay)
@@ -331,8 +336,11 @@ class Simulation:
         to how reallocations happen every CORE_REALLOCATION_TIMER
         """
         # next is the next time as per the timer, rather than how many ns in the future the event is
-        next_control_loop = (math.floor(self.state.timer.get_time() / self.config.RTT) + 1) * self.config.RTT
-        return next_control_loop
+        # next_control_loop = (math.floor(self.state.timer.get_time() / self.config.RTT) + 1) * self.config.RTT
+        # return next_control_loop
+        # RTTs are on microseconds anyways, so this will capture them
+        next_microsecond = (math.floor(self.state.timer.get_time() / 1000) + 1) * 1000
+        return next_microsecond
     def find_next_throughput(self):
         """Mimicking the find next alloc code, as breakwater runs its control loop every RTT, similar
         to how reallocations happen every CORE_REALLOCATION_TIMER
@@ -585,7 +593,7 @@ class Simulation:
         # TODO debugging
         if self.config.breakwater_debug_info:
             debugging_file = open("{}debugging.csv".format(new_dir_name), "w")
-            debugging_file.write("Time,Credits To Send,Cx_new,Client Credits,Client Demand,Client ID\n")
+            debugging_file.write("Time,Total Credits,Credits To Send,Cx_new,Cx,Client Dropped Credits,Client Demand,Client ID\n")
             for record in self.state.breakwater_server.debug_records:
                 debugging_file.write(",".join([str(x) for x in record]) + "\n")
             debugging_file.close()

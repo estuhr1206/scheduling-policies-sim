@@ -4,6 +4,7 @@
 import math
 from collections import deque
 import random
+import numpy as np
 
 # clients are initialized in simulation_state.py, (similar to items like the sim_queues)
 # list of them can be accessed in main simulation, from sim.state
@@ -33,6 +34,10 @@ class BreakwaterClient:
         self.dropped_credits = 0
 
         self.id = identifier
+        # currently, 100,000 microseconds in 0.1 seconds of simulated time
+        # can adjust if sim time is changing.
+        num_microseconds = int(self.state.config.sim_duration / 1000)
+        self.dropped_credits_map = np.zeros((num_microseconds + 1))
 
     def enqueue_task(self, task):
         self.queue.append(task)
@@ -94,8 +99,11 @@ class BreakwaterClient:
             self.c_in_use -= 1
             self.dropped_tasks += 1
             self.dropped_credits += 1
+            current_time = self.state.timer.get_time()
+            time_microseconds = int(current_time / 1000) + int(self.state.config.RTT / 1000)
+            self.dropped_credits_map[time_microseconds] += 1
             if self.state.config.record_cores_at_drops:
-                self.cores_at_drops.append([self.state.timer.get_time(), len(self.state.available_queues)])
+                self.cores_at_drops.append([current_time, len(self.state.available_queues)])
                 # breakwater = self.state.breakwater_server
                 # print("dumping info for debugging")
                 # print("breakwater: credit pool: {0}, credits issued: {1}".format(breakwater.total_credits, breakwater.credits_issued))
@@ -138,5 +146,10 @@ class BreakwaterClient:
         self.registered = False
         self.c_unused = 0
         self.window = 0
+
+    def restore_dropped_credits(self):
+        current_time_microseconds = int(self.state.timer.get_time() / 1000)
+        self.dropped_credits -= self.dropped_credits_map[current_time_microseconds]
+
 
 
