@@ -36,8 +36,9 @@
  30,
  31
 ],
- "record_throughput_over_time":true,
- "record_cores_over_time":true,
+ "progress_bar": false,
+ "record_throughput_over_time": true,
+ "record_cores_over_time": true,
  "record_credit_pool": true,
  "record_breakwater_info": true,
  "record_cores_at_drops": true,

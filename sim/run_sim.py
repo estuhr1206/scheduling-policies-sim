@@ -90,7 +90,7 @@ if __name__ == "__main__":
                 cfg.set_ws_permutation()
                 cfg.name = name
                 cfg.description = description
-                cfg.progress_bar = (i == 0)
+                cfg.progress_bar = (i == 0) and cfg.progress_bar
 
             else:
                 print("Missing or invalid argument")
@@ -108,7 +108,7 @@ if __name__ == "__main__":
                     cfg.reallocation_record = MULTI_THREAD_SIM_NAME_FORMAT.format(name_parts[0], name_parts[1], i)
                 cfg.BREAKWATER_TARGET_DELAY = target
                 cfg.name = name
-                cfg.progress_bar = (i == 0)
+                cfg.progress_bar = (i == 0) and cfg.progress_bar
                 cfg.description = description
 
             else:
@@ -128,7 +128,7 @@ if __name__ == "__main__":
                     cfg.reallocation_record = MULTI_THREAD_SIM_NAME_FORMAT.format(name_parts[0], name_parts[1], i)
                 cfg.RTT = RTT
                 cfg.name = name
-                cfg.progress_bar = (i == 0)
+                cfg.progress_bar = (i == 0) and cfg.progress_bar
                 cfg.description = description
 
             else:
@@ -148,7 +148,7 @@ if __name__ == "__main__":
                     cfg.reallocation_record = MULTI_THREAD_SIM_NAME_FORMAT.format(name_parts[0], name_parts[1], i)
                 cfg.avg_system_load = load / 100
                 cfg.name = name
-                cfg.progress_bar = (i == 0)
+                cfg.progress_bar = (i == 0) and cfg.progress_bar
                 cfg.description = description
 
             else:
