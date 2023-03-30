@@ -36,8 +36,8 @@ class BreakwaterClient:
         self.id = identifier
         # currently, 100,000 microseconds in 0.1 seconds of simulated time
         # can adjust if sim time is changing.
-        num_microseconds = int(self.state.config.sim_duration / 1000)
-        self.dropped_credits_map = np.zeros((num_microseconds + 1))
+        self.total_num_microseconds = int(self.state.config.sim_duration / 1000)
+        self.dropped_credits_map = np.zeros((self.total_num_microseconds + 1))
 
     def enqueue_task(self, task):
         self.queue.append(task)
@@ -85,23 +85,13 @@ class BreakwaterClient:
             self.state.queues[chosen_queue].enqueue(current_task, set_original=True)
         else:
             # shouldn't be dropped if load is low (aka the 50%)
-            """
-                TODO possible for client to get x credits, and try to spend x times and have it fail each time
-                actually, that seems ok, because then when it gets a task, it can try to use the excess
-                we'll see
-                this means client knows it failed immediately, effectively gets a free retry
-
-                or at least, gets to reuse these credits the next time control loop gets called,
-                which could be very often with short service times/few clients
-
-                could be dumping lots of tasks at once: bad
-            """
             self.c_in_use -= 1
             self.dropped_tasks += 1
             self.dropped_credits += 1
             current_time = self.state.timer.get_time()
             time_microseconds = int(current_time / 1000) + int(self.state.config.RTT / 1000)
-            self.dropped_credits_map[time_microseconds] += 1
+            if time_microseconds < self.total_num_microseconds + 1:
+                self.dropped_credits_map[time_microseconds] += 1
             if self.state.config.record_cores_at_drops:
                 self.cores_at_drops.append([current_time, len(self.state.available_queues)])
                 # breakwater = self.state.breakwater_server

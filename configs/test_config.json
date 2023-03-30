@@ -1,5 +1,5 @@
 {
- "avg_system_load": 1.2,
+ "avg_system_load": 1.0,
  "num_queues": 32,
  "num_threads": 32,
  "mapping": [
