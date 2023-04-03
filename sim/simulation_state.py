@@ -73,7 +73,7 @@ class SimulationState:
     def max_queue_delay(self):
         """Returns the max delay across queues in the system, used in breakwater credit pool calculations/AQM"""
         # streamlining to match other code in simulation
-        current_delays = [x.current_delay() for x in self.state.queues]
+        current_delays = [x.current_delay() for x in self.queues]
         return max(current_delays)
 
     def any_queue_past_delay_threshold(self):
