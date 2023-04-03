@@ -173,8 +173,19 @@ def main():
             i += 1
     else:
         print("File or directory not found")
-
-    pdf = matplotlib.backends.backend_pdf.PdfPages("time_series_plots.pdf")
+    pdf = None
+    if len(sys.argv) > 2:
+        csv_name = None
+        for x in os.listdir():
+            if x.endswith(".csv"):
+                # should grab just the filename, not .csv
+                csv_name = os.path.splitext(x)[0]
+                break
+        if csv_name == None:
+            csv_name = 'time_series_plots'
+        pdf = matplotlib.backends.backend_pdf.PdfPages("{}.pdf".format(csv_name))
+    else:
+        pdf = matplotlib.backends.backend_pdf.PdfPages("time_series_plots.pdf")
 
     for sim_name in sim_list:
         analyze_sim_run(sim_name.strip(), pdf)
