@@ -576,12 +576,12 @@ class Simulation:
                 credit_pool_file.write(",".join([str(x) for x in record]) + "\n")
             credit_pool_file.close()
         # TODO good way to record this for multiple clients?
-        if self.config.record_cores_at_drops:
-            cores_at_drops_file = open("{}cores_at_drops.csv".format(new_dir_name), "w")
-            cores_at_drops_file.write("Time,Available Queues\n")
-            for record in self.state.all_clients[0].cores_at_drops:
-                cores_at_drops_file.write(",".join([str(x) for x in record]) + "\n")
-            cores_at_drops_file.close()
+        if self.config.record_drops:
+            drops_record_file = open("{}drops_record.csv".format(new_dir_name), "w")
+            drops_record_file.write("Time,Available Queues,Credit Pool,Max Delay,Max Length,System Tasks,Client Window,C In Use,C Dropped,Client Demand\n")
+            for record in self.state.all_clients[0].drops_record:
+                drops_record_file.write(",".join([str(x) for x in record]) + "\n")
+            drops_record_file.close()
 
         if self.state.config.record_requests_at_once:
             requests_at_once_file = open("{}requests_at_once.csv".format(new_dir_name), "w")
@@ -604,6 +604,14 @@ class Simulation:
             for record in self.state.varyload_over_time_records:
                 varyload_over_time_file.write(",".join([str(x) for x in record]) + "\n")
             varyload_over_time_file.close()
+
+        # TODO not working for multiple clients
+        if self.config.record_core_deallocations:
+            core_deallocations_file = open("{}core_deallocations.csv".format(new_dir_name), "w")
+            core_deallocations_file.write("Time,Available Queues,Credit Pool,Max Delay,Max Length,System Tasks,Client Window,C In Use,C Dropped,Client Demand\n")
+            for record in self.state.deallocations_records:
+                core_deallocations_file.write(",".join([str(x) for x in record]) + "\n")
+            core_deallocations_file.close()
 
 
 

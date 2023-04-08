@@ -37,11 +37,12 @@
  31
 ],
  "progress_bar": false,
+ "record_core_deallocations": true,
  "record_throughput_over_time": true,
  "record_cores_over_time": true,
  "record_credit_pool": true,
  "record_breakwater_info": true,
- "record_cores_at_drops": true,
+ "record_drops": true,
  "record_requests_at_once": false,
  "breakwater_enabled": true,
  "breakwater_debug_info": true,

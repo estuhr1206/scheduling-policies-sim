@@ -37,6 +37,7 @@ class SimulationState:
 
         self.throughput_records = []
         self.current_completed_tasks = 0
+        self.deallocations_records = []
 
         # Global stats
         self.overall_steal_count = 0
@@ -69,6 +70,12 @@ class SimulationState:
     def record_cores_over_time(self):
         self.cores_over_time_records.append([self.timer.get_time(), len(self.available_queues), \
                                              self.config.num_threads - len(self.parked_threads)])
+
+    def max_queue_length(self):
+        """Returns the max delay across queues in the system, used in breakwater credit pool calculations/AQM"""
+        # streamlining to match other code in simulation
+        current_lens = [x.length() for x in self.queues]
+        return max(current_lens)
 
     def max_queue_delay(self):
         """Returns the max delay across queues in the system, used in breakwater credit pool calculations/AQM"""
@@ -303,7 +310,12 @@ class SimulationState:
                 all(x in self.parked_threads for x in self.threads[thread_id].queue.thread_ids) and \
                 len(self.available_queues) > 1:
             self.available_queues.remove(self.threads[thread_id].queue.id)
-
+        if self.config.record_core_deallocations:
+            # TODO only for single client right now
+            self.deallocations_records.append([self.timer.get_time(), len(self.available_queues), self.breakwater_server.total_credits,
+                                               self.max_queue_delay(), self.max_queue_length(), self.total_queue_occupancy(), 
+                                               self.all_clients[0].window, self.all_clients[0].c_in_use, 
+                                               self.all_clients[0].dropped_credits, self.all_clients[0].current_demand])
         # If in replay mode, allow the thread to finish its current task
         if self.config.reallocation_replay and self.threads[thread_id].is_productive():
             self.threads[thread_id].scheduled_dealloc = True

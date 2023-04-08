@@ -28,7 +28,7 @@ class BreakwaterClient:
         self.dropped_tasks = 0
         self.timed_out_tasks = 0
         self.total_tasks = 0
-        self.cores_at_drops = []
+        self.drops_record = []
         self.tasks_spent_control_loop = 0
 
         self.dropped_credits = 0
@@ -92,8 +92,10 @@ class BreakwaterClient:
             time_microseconds = int(current_time / 1000) + int(self.state.config.RTT / 1000)
             if time_microseconds < self.total_num_microseconds + 1:
                 self.dropped_credits_map[time_microseconds] += 1
-            if self.state.config.record_cores_at_drops:
-                self.cores_at_drops.append([current_time, len(self.state.available_queues)])
+            if self.state.config.record_drops:
+                self.drops_record.append([current_time, len(self.state.available_queues), self.state.breakwater_server.total_credits,
+                                          self.state.max_queue_delay(), self.state.max_queue_length(), self.state.total_queue_occupancy(), 
+                                          self.window, self.c_in_use, self.dropped_credits, self.current_demand])
                 # breakwater = self.state.breakwater_server
                 # print("dumping info for debugging")
                 # print("breakwater: credit pool: {0}, credits issued: {1}".format(breakwater.total_credits, breakwater.credits_issued))

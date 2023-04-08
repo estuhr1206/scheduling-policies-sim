@@ -76,7 +76,7 @@ def analyze_sim_run(run_name, pdf):
     plt1.tick_params(axis='both', which='major', labelsize=18)
 
     plt1.axis(xmin=x_range[0], xmax=x_range[1])
-    plt1.axis(ymin=50, ymax=101)
+    # plt1.axis(ymin=50, ymax=101)
     plt1.grid(which='major', color='black', linewidth=1.0)
     plt1.grid(which='minor', color='grey', linewidth=0.2)
     plt1.minorticks_on()
