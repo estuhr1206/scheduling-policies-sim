@@ -72,6 +72,8 @@ class BreakwaterClient:
         chosen_queue = random.choice(self.state.available_queues)
         # delay = self.state.queues[chosen_queue].current_delay()
         delay = self.state.max_queue_delay()
+        # always mark arrival time in order to trace runs better
+        current_task.arrival_time = self.state.timer.get_time()
         if self.state.config.no_drops:
             # allow enqueue to occur no matter what
             delay = 0
@@ -79,7 +81,7 @@ class BreakwaterClient:
             # need to override arrival time for core usage
             # this is ok, because the arrival time usage for enqueuing at clients occurs before this
             # override here
-            current_task.arrival_time = self.state.timer.get_time()
+            # current_task.arrival_time = self.state.timer.get_time()
             current_task.source_client = self.id
             # enqueue at core
             self.state.queues[chosen_queue].enqueue(current_task, set_original=True)
