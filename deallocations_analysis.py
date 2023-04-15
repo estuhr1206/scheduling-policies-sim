@@ -39,16 +39,10 @@ DEALLOCATIONS_FILE_NAME = 'core_deallocations.csv'
   Would require items to be put into bins.
 """
 
-def analyze_sim_run(current_dir, pdf):
+def analyze_sim_run(current_dir, pdf, arr, plus_minus):
     """
         FILE READ
     """
-
-
-    core_data = None
-    credit_data = None
-    task_data = None
-    throughput_data = None
 
     # task_file = RESULTS_SUBDIR_NAME.format(run_name) + TASK_FILE_NAME
     # drops_file = RESULTS_SUBDIR_NAME.format(run_name) + DROPS_FILE_NAME
@@ -60,6 +54,11 @@ def analyze_sim_run(current_dir, pdf):
     drops_file = DROPS_FILE_NAME
     deallocations_file = DEALLOCATIONS_FILE_NAME
     core_file = CORES_FILE_NAME
+    throughput_file = THROUGHPUT_FILE_NAME
+
+    df = pandas.read_csv(throughput_file)
+    Data = df[['Time', 'Throughput']]
+    throughput_data = np.array(Data)
 
     df = pandas.read_csv(core_file)
     Data = df[['Time', 'Queues']]
@@ -107,7 +106,7 @@ def analyze_sim_run(current_dir, pdf):
         PLOTTING
     """
 
-    fig, (plt1, plt2, plt3, plt4, plt5) = plt.subplots(5, 1, figsize=(20,24))
+    fig, (plt1, plt2, plt3, plt4, plt5, plt6) = plt.subplots(6, 1, figsize=(20,26))
     # TODO this can be something better
     fig.suptitle(current_dir, fontsize=22, y=0.90)
     x_range = [0, 100000]
@@ -115,7 +114,7 @@ def analyze_sim_run(current_dir, pdf):
     # for every us? Is that granular enough
     # took ~ 6 minutes to plot with 100,000 bins
     # took < 1 min for 10,000 bins
-    num_bins = 10000
+    num_bins = 100000
     """
     PLOT 1
     """
@@ -209,6 +208,27 @@ def analyze_sim_run(current_dir, pdf):
     plt5.set_xlabel('Arrival Time (us)', fontsize=18)
     plt5.set_ylabel('number of cores', fontsize=18)
 
+
+    """
+    PLOT 6
+    """
+    plt6.tick_params(axis='both', which='major', labelsize=18)
+
+    plt6.axis(xmin=x_range[0], xmax=x_range[1])
+    #plt6.axis(ymin=0, ymax=28)
+    plt6.grid(which='major', color='black', linewidth=1.0)
+    plt6.grid(which='minor', color='grey', linewidth=0.2)
+    plt6.minorticks_on()
+    # plt.ylim(ymin=0)
+
+            
+    plt6.plot(throughput_data[:,0]/1000, throughput_data[:,1], rasterized=rasterize)
+
+    plt6.set_xlabel('Time (microseconds)', fontsize=18)
+    plt6.set_ylabel('Throughput per second', fontsize=18)
+
+
+
     # file_name = run_name + 'time_series.png'
     # plt.savefig(file_name)
     # TODO
@@ -216,18 +236,28 @@ def analyze_sim_run(current_dir, pdf):
     # plt.close(fig)
     pdf.savefig(fig)
     # repeat the below for however many closeups are wanted
-    for curr_plot in [plt1, plt2, plt3, plt4, plt5]:
-      curr_plot.axis(xmin=59300, xmax=59600)
-    pdf.savefig(fig)
+    for xcenter in arr:
+        xcenter_int = int(xcenter)
+        print("plotting xrange: {}".format(xcenter_int))
+        curr_min = xcenter_int - plus_minus
+        curr_max = xcenter_int + plus_minus
+        for curr_plot in [plt1, plt2, plt3, plt4, plt5, plt6]:
+            curr_plot.axis(xmin=curr_min, xmax=curr_max)
+        pdf.savefig(fig)
 
 def main():
+    plus_minus = int(sys.argv[1])
+    arr = sys.argv[2:]
+    print("x ranges to inspect (will view -{} and + {} us)".format(plus_minus,plus_minus))
+    print(arr)
 
     current_dir = os.getcwd()
     thread_num = current_dir[-1]
     name = 'deallocations_analysis_plots_t{}'.format(thread_num)
     pdf = matplotlib.backends.backend_pdf.PdfPages("{}.pdf".format(name))
-    analyze_sim_run(current_dir, pdf)
-    print("Simulationanalysis complete")
+    page_name = os.path.basename(os.path.normpath(current_dir))
+    analyze_sim_run(page_name, pdf, arr, plus_minus)
+    print("Simulation analysis complete")
     pdf.close()
 
 if __name__ == "__main__":
