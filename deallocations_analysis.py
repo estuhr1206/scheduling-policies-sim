@@ -39,22 +39,20 @@ DEALLOCATIONS_FILE_NAME = 'core_deallocations.csv'
   Would require items to be put into bins.
 """
 
-def analyze_sim_run(current_dir, pdf, arr, plus_minus):
+def analyze_sim_run(run_name, arr, plus_minus):
+    pdf_name = "{}.pdf".format(run_name)
+    pdf_path = RESULTS_SUBDIR_NAME.format(run_name) + pdf_name
+    pdf = matplotlib.backends.backend_pdf.PdfPages(pdf_path)
     """
         FILE READ
     """
 
-    # task_file = RESULTS_SUBDIR_NAME.format(run_name) + TASK_FILE_NAME
-    # drops_file = RESULTS_SUBDIR_NAME.format(run_name) + DROPS_FILE_NAME
-    # deallocations_file = RESULTS_SUBDIR_NAME.format(run_name) + DEALLOCATIONS_FILE_NAME
-    # core_file = RESULTS_SUBDIR_NAME.format(run_name) + CORES_FILE_NAME
+    task_file = RESULTS_SUBDIR_NAME.format(run_name) + TASK_FILE_NAME
+    drops_file = RESULTS_SUBDIR_NAME.format(run_name) + DROPS_FILE_NAME
+    deallocations_file = RESULTS_SUBDIR_NAME.format(run_name) + DEALLOCATIONS_FILE_NAME
+    core_file = RESULTS_SUBDIR_NAME.format(run_name) + CORES_FILE_NAME
+    throughput_file = RESULTS_SUBDIR_NAME.format(run_name) + THROUGHPUT_FILE_NAME
 
-
-    task_file = TASK_FILE_NAME
-    drops_file = DROPS_FILE_NAME
-    deallocations_file = DEALLOCATIONS_FILE_NAME
-    core_file = CORES_FILE_NAME
-    throughput_file = THROUGHPUT_FILE_NAME
 
     df = pandas.read_csv(throughput_file)
     Data = df[['Time', 'Throughput']]
@@ -93,22 +91,21 @@ def analyze_sim_run(current_dir, pdf, arr, plus_minus):
     total_system_data = total_system_data[total_system_data[:,0].argsort()]
 
     # add on drop times as arrival times
-    # del task_data
-    # del df
-    # del Data
-    # del system_data
-    # del arrivals
-    # del drops_data
-    # del drops_data_system_tasks
+    del task_data
+    del df
+    del Data
+    del system_data
+    del arrivals
+    del drops_data_system_tasks
 
     rasterize = True
     """ 
         PLOTTING
     """
 
-    fig, (plt1, plt2, plt3, plt4, plt5, plt6) = plt.subplots(6, 1, figsize=(20,26))
+    fig, (plt1, plt2, plt3, plt4, plt5, plt6) = plt.subplots(6, 1, figsize=(20,28))
     # TODO this can be something better
-    fig.suptitle(current_dir, fontsize=22, y=0.90)
+    fig.suptitle(run_name, fontsize=22, y=0.90)
     x_range = [0, 100000]
     # x_range = [59300, 59600]
     # for every us? Is that granular enough
@@ -244,21 +241,56 @@ def analyze_sim_run(current_dir, pdf, arr, plus_minus):
         for curr_plot in [plt1, plt2, plt3, plt4, plt5, plt6]:
             curr_plot.axis(xmin=curr_min, xmax=curr_max)
         pdf.savefig(fig)
+    pdf.close()
+    plt.close()
+
+def get_xcenters(run_name, buffer):
+    deallocations_file = RESULTS_SUBDIR_NAME.format(run_name) + DEALLOCATIONS_FILE_NAME
+    df = pandas.read_csv(deallocations_file)
+    Data = df[['Time', 'Available Queues']]
+    deallocation_data = np.array(Data)
+    # print(deallocation_data.shape)
+    last_time = -2*buffer
+    time_stamps = []
+    for i in range(deallocation_data.shape[0]):
+        # should be sufficient conditions to see a dropped core, and still skip succssive drops
+        if deallocation_data[i][0] - buffer > last_time and deallocation_data[i][1] == 31:
+            last_time = deallocation_data[i][0]
+            time_stamps.append(int(last_time / 1000))
+    return time_stamps
 
 def main():
-    plus_minus = int(sys.argv[1])
-    arr = sys.argv[2:]
-    print("x ranges to inspect (will view -{} and + {} us)".format(plus_minus,plus_minus))
-    print(arr)
+    # ex. python3 path/deallocations_analysis.py nrgserver_23-04-05 500
+    plus_minus = int(sys.argv[2])
+    # put into nanoseconds
+    buffer = (plus_minus - 100) * 1000
+    sim_list = []
+    name = sys.argv[1].strip()
 
-    current_dir = os.getcwd()
-    thread_num = current_dir[-1]
-    name = 'deallocations_analysis_plots_t{}'.format(thread_num)
-    pdf = matplotlib.backends.backend_pdf.PdfPages("{}.pdf".format(name))
-    page_name = os.path.basename(os.path.normpath(current_dir))
-    analyze_sim_run(page_name, pdf, arr, plus_minus)
-    print("Simulation analysis complete")
-    pdf.close()
+    # File with list of sim names
+    if os.path.isfile("./" + name):
+        sim_list_file = open(name)
+        sim_list = sim_list_file.readlines()
+        sim_list_file.close()
+
+    # Name of one run
+    elif os.path.isdir(RESULTS_SUBDIR_NAME.format(name)):
+        sim_list.append(name)
+
+    # Name of multiple runs (different threads)
+    elif os.path.isdir(RESULTS_SUBDIR_NAME.format(THREAD_RUN_FORMAT.format(name, 0))):
+        i = 0
+        while os.path.isdir(RESULTS_SUBDIR_NAME.format(THREAD_RUN_FORMAT.format(name, i))):
+            sim_list.append(THREAD_RUN_FORMAT.format(name, i))
+            i += 1
+    else:
+        print("File or directory not found")
+
+    for sim_name in sim_list:
+        analyze_sim_run(sim_name.strip(), get_xcenters(sim_name.strip(), buffer), plus_minus)
+        print("Simulation {} analysis complete".format(sim_name))
+
+    print("All analysis complete")
 
 if __name__ == "__main__":
     main()
