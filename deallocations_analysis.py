@@ -242,6 +242,7 @@ def analyze_sim_run(run_name, arr, plus_minus):
             curr_plot.axis(xmin=curr_min, xmax=curr_max)
         pdf.savefig(fig)
     pdf.close()
+    plt.clf()
     plt.close()
 
 def get_xcenters(run_name, buffer):
