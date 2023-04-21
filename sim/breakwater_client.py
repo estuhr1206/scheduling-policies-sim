@@ -71,7 +71,7 @@ class BreakwaterClient:
         """
         chosen_queue = random.choice(self.state.available_queues)
         # delay = self.state.queues[chosen_queue].current_delay()
-        delay = self.state.max_queue_delay()
+        delay = self.state.max_queue_delay()[0]
         # always mark arrival time in order to trace runs better
         current_task.arrival_time = self.state.timer.get_time()
         if self.state.config.no_drops:
@@ -95,12 +95,13 @@ class BreakwaterClient:
             if time_microseconds < self.total_num_microseconds + 1:
                 self.dropped_credits_map[time_microseconds] += 1
             if self.state.config.record_drops:
+                delay_tuple = self.state.max_queue_delay()
+                length_tuple = self.state.max_queue_length()
                 self.drops_record.append([current_time, len(self.state.available_queues), self.state.breakwater_server.total_credits,
-                                          self.state.max_queue_delay(), self.state.max_queue_length(), self.state.total_queue_occupancy(), 
+                                          delay_tuple[0], delay_tuple[1], length_tuple[0], length_tuple[1], self.state.total_queue_occupancy(), 
                                           self.window, self.c_in_use, self.dropped_credits, self.current_demand])
-                # breakwater = self.state.breakwater_server
-                # print("dumping info for debugging")
-                # print("breakwater: credit pool: {0}, credits issued: {1}".format(breakwater.total_credits, breakwater.credits_issued))
+            if self.state.config.record_queue_lens:
+                self.state.record_queue_lengths()
             return False
         # TODO deregister is off for now
         # may have just finished our last task

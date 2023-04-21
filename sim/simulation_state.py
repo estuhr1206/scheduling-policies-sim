@@ -72,15 +72,15 @@ class SimulationState:
                                              self.config.num_threads - len(self.parked_threads)])
 
     def max_queue_length(self):
-        """Returns the max delay across queues in the system, used in breakwater credit pool calculations/AQM"""
+        """Returns the max queue length across queues in the system, used in breakwater credit pool calculations/AQM"""
         # streamlining to match other code in simulation
-        current_lens = [x.length() for x in self.queues]
+        current_lens = [(x.length(), x.id) for x in self.queues]
         return max(current_lens)
 
     def max_queue_delay(self):
         """Returns the max delay across queues in the system, used in breakwater credit pool calculations/AQM"""
         # streamlining to match other code in simulation
-        current_delays = [x.current_delay() for x in self.queues]
+        current_delays = [(x.current_delay(), x.id) for x in self.queues]
         return max(current_delays)
 
     def any_queue_past_delay_threshold(self):
@@ -213,7 +213,7 @@ class SimulationState:
     def any_incomplete(self):
         """Return true if there are any incomplete tasks for the entire simulation."""
         return self.complete_task_count < self.tasks_scheduled
-
+    # TODO I didn't write this but this looks like it should be self.timer not self.state.timer
     def record_ws_check(self, local_id, remote, check_count, successful=False):
         """Record a work steal check on a queue to see if it can be stolen from."""
         if self.config.record_steals:
@@ -228,7 +228,8 @@ class SimulationState:
         """Record the lengths of all queues."""
         if self.config.record_queue_lens:
             # self.queue_lens.append([x.length() for x in self.queues])
-            self.queue_lens.append([x.current_delay() for x in self.queues])
+            # adding timestamp
+            self.queue_lens.append([self.timer.get_time()] + [x.current_delay() for x in self.queues])
 
     def add_reallocation(self, is_park, attempted=False):
         """Record a reallocation.
@@ -312,8 +313,10 @@ class SimulationState:
             self.available_queues.remove(self.threads[thread_id].queue.id)
         if self.config.record_core_deallocations:
             # TODO only for single client right now
+            delay_tuple = self.max_queue_delay()
+            length_tuple = self.max_queue_length()
             self.deallocations_records.append([self.timer.get_time(), len(self.available_queues), self.breakwater_server.total_credits,
-                                               self.max_queue_delay(), self.max_queue_length(), self.total_queue_occupancy(), 
+                                               delay_tuple[0], delay_tuple[1], length_tuple[0], length_tuple[1], self.total_queue_occupancy(), 
                                                self.all_clients[0].window, self.all_clients[0].c_in_use, 
                                                self.all_clients[0].dropped_credits, self.all_clients[0].current_demand])
         # If in replay mode, allow the thread to finish its current task
