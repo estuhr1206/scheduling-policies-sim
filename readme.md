@@ -21,7 +21,9 @@ Flags: `-d` for debug output to standard out.
 
 `-varycores`: Vary the number of cores in each simulation rather than varying the load.
 
-`-varyRTT`: Runs with the same number of cores and load, but across different values for RTT. Intended for breakwater. 
+`-varyRTT`: Runs with the same number of cores and load, but across different values for RTT. Intended for breakwater.
+
+`-varytarget`: Runs with same number of cores and load, but across different values for Breakwater's target delay.
 
 `description`: String to describe the simulation group. This will be written in `results/meta_log`
 
