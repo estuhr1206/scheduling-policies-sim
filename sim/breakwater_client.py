@@ -147,8 +147,10 @@ class BreakwaterClient:
     def restore_dropped_credits(self):
         current_interval = int(self.state.timer.get_time() / self.granularity)
         self.dropped_credits -= self.dropped_credits_map[current_interval]
+        self.client_control_loop()
     def check_successes(self):
-        current_interval = int(self.state.timer.get_time() / self.granularity)
+        current_time = self.state.timer.get_time()
+        current_interval = int(current_time / self.granularity)
         num_successes = self.success_credits_map[current_interval]
         if num_successes > 0:
             """
@@ -161,11 +163,15 @@ class BreakwaterClient:
                 here we are delayed by an RTT at the client, so we may have the server
                 do this instantly to simulate it simply being delayed an RTT
 
-                note: this means that the client in use credits ought to be updated AFTER
-                the server call
+                edit: I don't think this matters-, so swapping to not need another client control
+                loop call
+                    note: this means that the client in use credits ought to be updated AFTER
+                    the server call
             """
-            self.state.breakwater_server.lazy_distribution(self.id)
             self.c_in_use -= num_successes
+            if current_time % self.state.config.RTT != 0:
+                self.state.breakwater_server.lazy_distribution(self.id)
+            
 
 
 
