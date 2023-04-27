@@ -39,6 +39,7 @@ class BreakwaterClient:
         # can adjust if sim time is changing.
         self.total_intervals = int(self.state.config.sim_duration / self.granularity)
         self.dropped_credits_map = np.zeros((self.total_intervals + 1))
+        self.success_credits_map = np.zeros((self.total_intervals + 1))
 
     def enqueue_task(self, task):
         self.queue.append(task)
@@ -146,6 +147,25 @@ class BreakwaterClient:
     def restore_dropped_credits(self):
         current_interval = int(self.state.timer.get_time() / self.granularity)
         self.dropped_credits -= self.dropped_credits_map[current_interval]
+    def check_successes(self):
+        current_interval = int(self.state.timer.get_time() / self.granularity)
+        num_successes = self.success_credits_map[current_interval]
+        if num_successes > 0:
+            """
+                a bit odd to call this here, but server side logic is still
+                instant.
+                This call to the server represents that the server would have
+                done the lazy distribution when the task completed at the server.
+
+                The reponse has been delayed by an RTT to the client, therefore,
+                here we are delayed by an RTT at the client, so we may have the server
+                do this instantly to simulate it simply being delayed an RTT
+
+                note: this means that the client in use credits ought to be updated AFTER
+                the server call
+            """
+            self.state.breakwater_server.lazy_distribution(self.id)
+            self.c_in_use -= num_successes
 
 
 

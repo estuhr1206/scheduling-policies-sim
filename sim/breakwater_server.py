@@ -58,23 +58,11 @@ class BreakwaterServer:
 
     def lazy_distribution(self, client_id):
         """
-            for one client, this is easy and makes sense. We're just changing where the send credit call
-            happens
-
-            For multiple clients, it's a bit more hairy.
-            Or is it???
-
-            actually, the whole thing is more that we don't really need a "send credit" method
-            or at least, not in its current state, choosing random clients and such.
-
             issue
             if demand is sky high, won't a single client eat up all available credits?
             how does this ever become fair?
             Won't that single client then also have more opportunities (more responses to task
             completions) to get more credits and have a feedback loop?
-
-            TODO but not a big deal for now
-
         """
         client = self.state.all_clients[client_id]
         available_credits = self.total_credits - self.credits_issued

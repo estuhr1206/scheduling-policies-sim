@@ -78,8 +78,12 @@ class Task:
         self.state.current_completed_tasks += 1
         # breakwater
         if self.config.breakwater_enabled:
-            self.state.all_clients[self.source_client].c_in_use -= 1
-            self.state.breakwater_server.lazy_distribution(self.source_client)
+            client = self.state.all_clients[self.source_client]
+            current_time = self.state.timer.get_time()
+            time_g = int(current_time / self.config.BREAKWATER_GRANULARITY) + int(self.config.RTT / self.config.BREAKWATER_GRANULARITY)
+            if time_g < client.total_intervals + 1:
+                client.success_credits_map[time_g] += 1
+            
 
     def is_zero_duration(self):
         """True if the task has zero service time."""

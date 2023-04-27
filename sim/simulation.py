@@ -335,13 +335,16 @@ class Simulation:
         """Mimicking the find next alloc code, as breakwater runs its control loop every RTT, similar
         to how reallocations happen every CORE_REALLOCATION_TIMER
         """
-        temp_timer = min(self.config.BREAKWATER_GRANULARITY, self.config.RTT)
         # next is the next time as per the timer, rather than how many ns in the future the event is
-        # next_control_loop = (math.floor(self.state.timer.get_time() / self.config.RTT) + 1) * self.config.RTT
-        # return next_control_loop
-        # RTTs are on microseconds anyways, so this will capture them
-        next_microsecond = (math.floor(self.state.timer.get_time() / temp_timer) + 1) * temp_timer
-        return next_microsecond
+        next_control_loop = (math.floor(self.state.timer.get_time() / self.config.RTT) + 1) * self.config.RTT
+        return next_control_loop
+    def find_next_breakwater_granularity(self):
+        """Mimicking the find next alloc code, similar to how reallocations happen every CORE_REALLOCATION_TIMER
+            Breakwater will report failures and successes at a certain granularity
+        """
+        # next is the next time as per the timer, rather than how many ns in the future the event is
+        next_time = (math.floor(self.state.timer.get_time() / self.config.BREAKWATER_GRANULARITY) + 1) * self.config.BREAKWATER_GRANULARITY
+        return next_time
     def find_next_throughput(self):
         """Mimicking the find next alloc code, as breakwater runs its control loop every RTT, similar
         to how reallocations happen every CORE_REALLOCATION_TIMER
@@ -434,8 +437,11 @@ class Simulation:
 
                 even with lazy distribution, next_completion_time should cover this
             """
-            next_breakwater = self.find_next_breakwater_control_loop()
+            next_RTT = self.find_next_breakwater_control_loop()
+            upcoming_events.append(next_RTT)
+            next_breakwater = self.find_next_breakwater_granularity()
             upcoming_events.append(next_breakwater)
+
         if self.config.record_throughput_over_time:
             next_throughput = self.find_next_throughput()
             upcoming_events.append(next_throughput)
