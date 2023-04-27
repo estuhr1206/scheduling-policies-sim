@@ -21,6 +21,10 @@ Flags: `-d` for debug output to standard out.
 
 `-varycores`: Vary the number of cores in each simulation rather than varying the load.
 
+`-varyRTT`: Runs with the same number of cores and load, but across different values for RTT. Intended for breakwater.
+
+`-varytarget`: Runs with same number of cores and load, but across different values for Breakwater's target delay.
+
 `description`: String to describe the simulation group. This will be written in `results/meta_log`
 
 Example: `python3 run_sim.py config.json -varycores "work stealing static allocations, 400ns overhead`
@@ -103,6 +107,28 @@ Arguments:
  the name of a run with multiple parallel threads.
 * output_file: Output file for results
 * ignored_time: Percentage of simulation time (as an int) to drop from the beginning of the data.
+
+## Additional Analysis
+Note that currently breakwater features are currently for a single client, and many portions will break if multiple clients are created. TODO will be added later.
+### time_series plots
+* Currently designed for parallel runs with varyRTT enabled. Produces plots for each run detailing the credit pool, number of cores, latencies, and throughput.
+* `python3 time_series.py <simulations> <any character>`
+* For a simulation run named: sim_MachineName_23-04-10_time
+  * ex. `python3 path/time_series.py MachineName_23-04-10_time`
+* To copy the name of an analysis.csv file already present in the run directory for the pdf's file name, do:
+  * `python3 path/time_series.py MachineName_23-04-10_time a`
+  * Where 'a' can be any character, it just is looking for an additional argument.
+
+### drops_timeouts plot
+* Run in the exact same way as time_series. Produces a png that shows the number of drops that occurred for each parallel run. Use any character as an extra argument to copy the name of an existing csv file.
+* ex. `python3 drops_timeouts.py <simulations> <any character>`
+
+### deallocations_analysis
+* `python3 deallocations_analysis.py <simulations> <window>`
+* Produces a pdf of plots for each thread of a parallel run. It details arrivals, completions, tasks in system queues, dropped credits, number of available cores/queues (intended for simulations with 1 core <=> 1 queue), and throughput. 
+* window is an integer that details how many microseconds around core deallocations to plot. For example, if a series of core drops starts at 1000 us, then the plot will have an xrange of (500, 1500). 
+* The number of bins for the histograms of arrivals and completions can be adjusted, and heavily impacts the runtime of this script. Currently set to 100,000 to yield one bin per microsecond.
+
 
 ## To Delete Old Results
 Removes output files associated with the simulation and removes the line in the meta log.

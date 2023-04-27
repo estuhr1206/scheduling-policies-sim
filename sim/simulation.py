@@ -82,9 +82,19 @@ class Simulation:
                 task_number += 1
 
             # breakwater
+            # restore dropped
+            if self.config.breakwater_enabled and self.state.timer.get_time() % 1000 == 0:
+                for client_id in self.state.breakwater_server.available_client_ids:
+                    self.state.all_clients[client_id].restore_dropped_credits()
+            # server control loop
             if self.config.breakwater_enabled and self.state.timer.get_time() % self.config.RTT == 0:
-                max_delay = self.state.max_queue_delay()
+                max_delay = self.state.max_queue_delay()[0]
                 self.state.breakwater_server.control_loop(max_delay)
+
+            if self.config.record_throughput_over_time and self.state.timer.get_time() % self.config.THROUGHPUT_TIMER == 0:
+                current_throughput = (self.state.current_completed_tasks / self.config.THROUGHPUT_TIMER) * 10**9
+                self.state.throughput_records.append([self.state.timer.get_time(), current_throughput])
+                self.state.current_completed_tasks = 0
 
             # Reallocations
             # Continuously check for reallocations
@@ -326,8 +336,18 @@ class Simulation:
         to how reallocations happen every CORE_REALLOCATION_TIMER
         """
         # next is the next time as per the timer, rather than how many ns in the future the event is
-        next_control_loop = (math.floor(self.state.timer.get_time() / self.config.RTT) + 1) * self.config.RTT
-        return next_control_loop
+        # next_control_loop = (math.floor(self.state.timer.get_time() / self.config.RTT) + 1) * self.config.RTT
+        # return next_control_loop
+        # RTTs are on microseconds anyways, so this will capture them
+        next_microsecond = (math.floor(self.state.timer.get_time() / 1000) + 1) * 1000
+        return next_microsecond
+    def find_next_throughput(self):
+        """Mimicking the find next alloc code, as breakwater runs its control loop every RTT, similar
+        to how reallocations happen every CORE_REALLOCATION_TIMER
+        """
+        # next is the next time as per the timer, rather than how many ns in the future the event is
+        next_throughput = (math.floor(self.state.timer.get_time() / self.config.THROUGHPUT_TIMER) + 1) * self.config.THROUGHPUT_TIMER
+        return next_throughput
 
     def find_next_arrival_and_alloc(self, task_number, allocation_number):
         """Determine the next task arrival and allocation decision.
@@ -410,9 +430,14 @@ class Simulation:
                 
                 next_arrival is checked here already, so this should cover all cases
                 in which breakwater would have any actions to perform
+
+                even with lazy distribution, next_completion_time should cover this
             """
             next_breakwater = self.find_next_breakwater_control_loop()
             upcoming_events.append(next_breakwater)
+        if self.config.record_throughput_over_time:
+            next_throughput = self.find_next_throughput()
+            upcoming_events.append(next_throughput)
         if not any(upcoming_events):
             next_event = self.state.timer.get_time() + 1
         else:
@@ -515,6 +540,7 @@ class Simulation:
         # If recording queue lengths, save
         if self.config.record_queue_lens:
             qlen_file = open("{}queue_lens.csv".format(new_dir_name), "w")
+            qlen_file.write("Time," + ",".join([str(x.id) for x in self.state.queues]) + "\n")
             for lens in self.state.queue_lens:
                 qlen_file.write(",".join([str(x) for x in lens]) + "\n")
             qlen_file.close()
@@ -527,14 +553,21 @@ class Simulation:
             for record in self.state.cores_over_time_records:
                 cores_over_time_file.write(",".join([str(x) for x in record]) + "\n")
             cores_over_time_file.close()
+        
+        if self.config.record_throughput_over_time:
+            throughput_over_time_file = open("{}throughput_over_time.csv".format(new_dir_name), "w")
+            throughput_over_time_file.write("Time,Throughput\n")
+            for record in self.state.throughput_records:
+                throughput_over_time_file.write(",".join([str(x) for x in record]) + "\n")
+            throughput_over_time_file.close()
 
         # breakwater enabled only
         if self.config.record_breakwater_info:
             breakwater_info_file = open("{}breakwater_info.csv".format(new_dir_name), "w")
-            breakwater_info_file.write("Total Tasks,Dropped Tasks,Immediate Tasks\n")
+            breakwater_info_file.write("ID,Total Tasks,Dropped Tasks,Immediate Tasks,Timed Out Tasks\n")
             for client in self.state.all_clients:
-                breakwater_info_file.write("{},{},{}\n".format(client.total_tasks, client.dropped_tasks,
-                                                               client.tasks_spent_control_loop))
+                breakwater_info_file.write("{},{},{},{},{}\n".format(client.id, client.total_tasks, client.dropped_tasks,
+                                                               client.tasks_spent_control_loop, client.timed_out_tasks))
             breakwater_info_file.close()
 
         if self.config.record_credit_pool:
@@ -544,12 +577,13 @@ class Simulation:
                 credit_pool_file.write(",".join([str(x) for x in record]) + "\n")
             credit_pool_file.close()
         # TODO good way to record this for multiple clients?
-        if self.config.record_cores_at_drops:
-            cores_at_drops_file = open("{}cores_at_drops.csv".format(new_dir_name), "w")
-            cores_at_drops_file.write("Time,Available Queues\n")
-            for record in self.state.all_clients[0].cores_at_drops:
-                cores_at_drops_file.write(",".join([str(x) for x in record]) + "\n")
-            cores_at_drops_file.close()
+        if self.config.record_drops:
+            drops_record_file = open("{}drops_record.csv".format(new_dir_name), "w")
+            drops_record_file.write("Time,Available Queues,Credit Pool,Max Delay,Delay ID,Max Length,Length ID,"
+                                    "System Tasks,Client Window,C In Use,C Dropped,Client Demand\n")
+            for record in self.state.all_clients[0].drops_record:
+                drops_record_file.write(",".join([str(x) for x in record]) + "\n")
+            drops_record_file.close()
 
         if self.state.config.record_requests_at_once:
             requests_at_once_file = open("{}requests_at_once.csv".format(new_dir_name), "w")
@@ -561,10 +595,26 @@ class Simulation:
         # TODO debugging
         if self.config.breakwater_debug_info:
             debugging_file = open("{}debugging.csv".format(new_dir_name), "w")
-            debugging_file.write("Time,Credits To Send,Cx_new,Client Credits,Client Demand,Client ID\n")
+            debugging_file.write("Time,Total Credits,Credits To Send,Cx_new,Cx,Client Dropped Credits,Client Demand,Client ID\n")
             for record in self.state.breakwater_server.debug_records:
                 debugging_file.write(",".join([str(x) for x in record]) + "\n")
             debugging_file.close()
+        
+        if self.config.varyload_over_time:
+            varyload_over_time_file = open("{}varyload_over_time.csv".format(new_dir_name), "w")
+            varyload_over_time_file.write("Time,Load,Request Rate\n")
+            for record in self.state.varyload_over_time_records:
+                varyload_over_time_file.write(",".join([str(x) for x in record]) + "\n")
+            varyload_over_time_file.close()
+
+        # TODO not working for multiple clients
+        if self.config.record_core_deallocations:
+            core_deallocations_file = open("{}core_deallocations.csv".format(new_dir_name), "w")
+            core_deallocations_file.write("Time,Available Queues,Credit Pool,Max Delay,Delay ID,"
+                                          "Max Length,Length ID,System Tasks,Client Window,C In Use,C Dropped,Client Demand\n")
+            for record in self.state.deallocations_records:
+                core_deallocations_file.write(",".join([str(x) for x in record]) + "\n")
+            core_deallocations_file.close()
 
 
 

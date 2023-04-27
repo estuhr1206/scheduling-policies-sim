@@ -16,6 +16,7 @@ class Task:
         self.time_left = time
         self.complete = False
         self.arrival_time = arrival_time
+        self.original_arrival_time = arrival_time
         self.start_time = None
         self.completion_time = 0
         self.original_queue = None
@@ -74,6 +75,7 @@ class Task:
         """Complete the task and do any necessary accounting."""
         # Want to track how many vanilla tasks get completed
         self.state.complete_task_count += 1
+        self.state.current_completed_tasks += 1
         # breakwater
         if self.config.breakwater_enabled:
             self.state.all_clients[self.source_client].c_in_use -= 1
@@ -98,7 +100,7 @@ class Task:
             self.arrival_time, self.service_time, self.original_queue)
 
     def get_stats(self):
-        stats = [self.arrival_time, self.time_in_system(), self.service_time, self.steal_count, self.original_queue,
+        stats = [self.arrival_time, self.time_in_system(), self.original_arrival_time, self.service_time, self.steal_count, self.original_queue,
                  self.queued_ahead, self.total_queue, self.queue_checks, self.front_task_time, self.requeue_wait_time()]
 
         if self.config.delay_flagging_enabled:
@@ -109,7 +111,7 @@ class Task:
 
     @staticmethod
     def get_stat_headers(config):
-        headers = ["Arrival Time", "Time in System", "Request Service Time", "Steal Count", "Original Queue",
+        headers = ["Arrival Time", "Time in System", "Original Arrival Time", "Request Service Time", "Steal Count", "Original Queue",
                    "Queue Length", "Total Queue Length", "Queue Checks", "Time Left of Task Ahead", "Requeue Wait Time"]
         if config.delay_flagging_enabled:
             headers += ["Flag Steal Count", "Flag Wait Time", "Flag Set Delay", "Flagged", "Flagged Time Left"]

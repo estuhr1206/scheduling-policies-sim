@@ -4,6 +4,7 @@
 import math
 from collections import deque
 import random
+import numpy as np
 
 # clients are initialized in simulation_state.py, (similar to items like the sim_queues)
 # list of them can be accessed in main simulation, from sim.state
@@ -25,11 +26,18 @@ class BreakwaterClient:
         self.registered = False
         self.state = state
         self.dropped_tasks = 0
+        self.timed_out_tasks = 0
         self.total_tasks = 0
-        self.cores_at_drops = []
+        self.drops_record = []
         self.tasks_spent_control_loop = 0
 
+        self.dropped_credits = 0
+
         self.id = identifier
+        # currently, 100,000 microseconds in 0.1 seconds of simulated time
+        # can adjust if sim time is changing.
+        self.total_num_microseconds = int(self.state.config.sim_duration / 1000)
+        self.dropped_credits_map = np.zeros((self.total_num_microseconds + 1))
 
     def enqueue_task(self, task):
         self.queue.append(task)
@@ -63,30 +71,37 @@ class BreakwaterClient:
         """
         chosen_queue = random.choice(self.state.available_queues)
         # delay = self.state.queues[chosen_queue].current_delay()
-        delay = self.state.max_queue_delay()
+        delay = self.state.max_queue_delay()[0]
+        # always mark arrival time in order to trace runs better
+        current_task.arrival_time = self.state.timer.get_time()
+        if self.state.config.no_drops:
+            # allow enqueue to occur no matter what
+            delay = 0
         if delay <= 2 * self.state.config.BREAKWATER_TARGET_DELAY:
             # need to override arrival time for core usage
             # this is ok, because the arrival time usage for enqueuing at clients occurs before this
             # override here
-            current_task.arrival_time = self.state.timer.get_time()
+            # current_task.arrival_time = self.state.timer.get_time()
             current_task.source_client = self.id
             # enqueue at core
             self.state.queues[chosen_queue].enqueue(current_task, set_original=True)
         else:
             # shouldn't be dropped if load is low (aka the 50%)
-            """
-                TODO possible for client to get x credits, and try to spend x times and have it fail each time
-                actually, that seems ok, because then when it gets a task, it can try to use the excess
-                we'll see
-                this means client knows it failed immediately, effectively gets a free retry
-            """
             self.c_in_use -= 1
             self.dropped_tasks += 1
-            if self.state.config.record_cores_at_drops:
-                self.cores_at_drops.append([self.state.timer.get_time(), len(self.state.available_queues)])
-                # breakwater = self.state.breakwater_server
-                # print("dumping info for debugging")
-                # print("breakwater: credit pool: {0}, credits issued: {1}".format(breakwater.total_credits, breakwater.credits_issued))
+            self.dropped_credits += 1
+            current_time = self.state.timer.get_time()
+            time_microseconds = int(current_time / 1000) + int(self.state.config.RTT / 1000)
+            if time_microseconds < self.total_num_microseconds + 1:
+                self.dropped_credits_map[time_microseconds] += 1
+            if self.state.config.record_drops:
+                delay_tuple = self.state.max_queue_delay()
+                length_tuple = self.state.max_queue_length()
+                self.drops_record.append([current_time, len(self.state.available_queues), self.state.breakwater_server.total_credits,
+                                          delay_tuple[0], delay_tuple[1], length_tuple[0], length_tuple[1], self.state.total_queue_occupancy(), 
+                                          self.window, self.c_in_use, self.dropped_credits, self.current_demand])
+            if self.state.config.record_queue_lens:
+                self.state.record_queue_lengths()
             return False
         # TODO deregister is off for now
         # may have just finished our last task
@@ -97,7 +112,17 @@ class BreakwaterClient:
     def client_control_loop(self, from_server=False):
         if self.current_demand < 0:
                 raise ValueError('error, demand was below 0')
-        self.c_unused = self.window - self.c_in_use
+        if self.state.config.request_timeout:
+            while self.current_demand > 0:
+                current_task = self.queue[0]
+                if current_task.arrival_time <= self.state.timer.get_time() - self.state.config.CLIENT_TIMEOUT:
+                    self.queue.popleft()
+                    self.current_demand -= 1
+                    self.timed_out_tasks += 1
+                else:
+                    break
+
+        self.c_unused = self.window - (self.c_in_use + self.dropped_credits)
         while self.current_demand > 0 and self.c_unused > 0:
             if from_server:
                 self.tasks_spent_control_loop += 1
@@ -110,10 +135,16 @@ class BreakwaterClient:
     # simplify debugging, don't deregister
     def deregister(self):
         # important that this call to server is first, as it will take back credits the client currently has
-        self.c_unused = self.window - self.c_in_use
+        # I think it should just be window that gets subtracted from issued
+        #self.c_unused = self.window - self.c_in_use
         self.state.breakwater_server.client_deregister(self)
         self.registered = False
         self.c_unused = 0
         self.window = 0
+
+    def restore_dropped_credits(self):
+        current_time_microseconds = int(self.state.timer.get_time() / 1000)
+        self.dropped_credits -= self.dropped_credits_map[current_time_microseconds]
+
 
 

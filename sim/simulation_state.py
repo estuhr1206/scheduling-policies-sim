@@ -33,6 +33,11 @@ class SimulationState:
         self.all_clients = []
         self.breakwater_server = None
         self.cores_over_time_records = []
+        self.varyload_over_time_records = []
+
+        self.throughput_records = []
+        self.current_completed_tasks = 0
+        self.deallocations_records = []
 
         # Global stats
         self.overall_steal_count = 0
@@ -66,15 +71,17 @@ class SimulationState:
         self.cores_over_time_records.append([self.timer.get_time(), len(self.available_queues), \
                                              self.config.num_threads - len(self.parked_threads)])
 
+    def max_queue_length(self):
+        """Returns the max queue length across queues in the system, used in breakwater credit pool calculations/AQM"""
+        # streamlining to match other code in simulation
+        current_lens = [(x.length(), x.id) for x in self.queues]
+        return max(current_lens)
+
     def max_queue_delay(self):
         """Returns the max delay across queues in the system, used in breakwater credit pool calculations/AQM"""
-        # could do a simpler max or something, but because we're calling upon each queue, looping seems necessary
-        temp_max = -1
-        for x in self.queues:
-            temp_current_delay = x.current_delay()
-            if temp_current_delay > temp_max:
-                temp_max = temp_current_delay
-        return temp_max
+        # streamlining to match other code in simulation
+        current_delays = [(x.current_delay(), x.id) for x in self.queues]
+        return max(current_delays)
 
     def any_queue_past_delay_threshold(self):
         """Returns true if any queue has a queueing delay longer than the reallocation interval."""
@@ -206,7 +213,7 @@ class SimulationState:
     def any_incomplete(self):
         """Return true if there are any incomplete tasks for the entire simulation."""
         return self.complete_task_count < self.tasks_scheduled
-
+    # TODO I didn't write this but this looks like it should be self.timer not self.state.timer
     def record_ws_check(self, local_id, remote, check_count, successful=False):
         """Record a work steal check on a queue to see if it can be stolen from."""
         if self.config.record_steals:
@@ -221,7 +228,8 @@ class SimulationState:
         """Record the lengths of all queues."""
         if self.config.record_queue_lens:
             # self.queue_lens.append([x.length() for x in self.queues])
-            self.queue_lens.append([x.current_delay() for x in self.queues])
+            # adding timestamp
+            self.queue_lens.append([self.timer.get_time()] + [x.current_delay() for x in self.queues])
 
     def add_reallocation(self, is_park, attempted=False):
         """Record a reallocation.
@@ -303,7 +311,14 @@ class SimulationState:
                 all(x in self.parked_threads for x in self.threads[thread_id].queue.thread_ids) and \
                 len(self.available_queues) > 1:
             self.available_queues.remove(self.threads[thread_id].queue.id)
-
+        if self.config.record_core_deallocations:
+            # TODO only for single client right now
+            delay_tuple = self.max_queue_delay()
+            length_tuple = self.max_queue_length()
+            self.deallocations_records.append([self.timer.get_time(), len(self.available_queues), self.breakwater_server.total_credits,
+                                               delay_tuple[0], delay_tuple[1], length_tuple[0], length_tuple[1], self.total_queue_occupancy(), 
+                                               self.all_clients[0].window, self.all_clients[0].c_in_use, 
+                                               self.all_clients[0].dropped_credits, self.all_clients[0].current_demand])
         # If in replay mode, allow the thread to finish its current task
         if self.config.reallocation_replay and self.threads[thread_id].is_productive():
             self.threads[thread_id].scheduled_dealloc = True
@@ -398,13 +413,37 @@ class SimulationState:
             This likely causes high delay at the queues, because of this very jagged
             enqueuing every RTT by the client
         """
-        request_rate = config.avg_system_load * config.load_thread_count / config.AVERAGE_SERVICE_TIME
+        # sim duration typically .1s, aka 100,000,000 ns
+        if config.varyload_over_time:
+            interval_list = []
+            loads = [0.2, 0.4, 0.6, 0.8]
+            # loads = [0.2, 0.5, 1.4]
+            interval_increment = config.sim_duration / len(loads)
+            interval_value = interval_increment
+            for temp_i in range(len(loads)):
+                interval_list.append(interval_value)
+                interval_value += interval_increment
+            
+            current_interval = 0
+            request_rate = loads[current_interval] * config.load_thread_count / config.AVERAGE_SERVICE_TIME
+            self.varyload_over_time_records.append([0, loads[current_interval], request_rate])
+        else:
+            request_rate = config.avg_system_load * config.load_thread_count / config.AVERAGE_SERVICE_TIME
+
         next_task_time = int(1/request_rate) if config.regular_arrivals else int(random.expovariate(request_rate))
         if config.bimodal_service_time:
             distribution = [500] * 9 + [5500]
         i = 0
         while (config.sim_duration is None or next_task_time < config.sim_duration) and \
                 (config.num_tasks is None or i < config.num_tasks):
+            if config.varyload_over_time:
+                if next_task_time >= interval_list[current_interval]:
+                    current_interval += 1
+                    request_rate = loads[current_interval] * config.load_thread_count / config.AVERAGE_SERVICE_TIME
+                    # because this is in init, next_task_time serves as an approximation of the time of the sim
+                    # where this shift in load will be seen. It dictates the first arrival of tasks at this new rate
+                    self.varyload_over_time_records.append([next_task_time, loads[current_interval], request_rate])
+            
             service_time = None
             while service_time is None or service_time == 0:
                 if config.constant_service_time:
