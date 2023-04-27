@@ -34,10 +34,11 @@ class BreakwaterClient:
         self.dropped_credits = 0
 
         self.id = identifier
+        self.granularity = self.state.config.BREAKWATER_GRANULARITY
         # currently, 100,000 microseconds in 0.1 seconds of simulated time
         # can adjust if sim time is changing.
-        self.total_num_microseconds = int(self.state.config.sim_duration / 1000)
-        self.dropped_credits_map = np.zeros((self.total_num_microseconds + 1))
+        self.total_intervals = int(self.state.config.sim_duration / self.granularity)
+        self.dropped_credits_map = np.zeros((self.total_intervals + 1))
 
     def enqueue_task(self, task):
         self.queue.append(task)
@@ -91,9 +92,9 @@ class BreakwaterClient:
             self.dropped_tasks += 1
             self.dropped_credits += 1
             current_time = self.state.timer.get_time()
-            time_microseconds = int(current_time / 1000) + int(self.state.config.RTT / 1000)
-            if time_microseconds < self.total_num_microseconds + 1:
-                self.dropped_credits_map[time_microseconds] += 1
+            time_g = int(current_time / self.granularity) + int(self.state.config.RTT / self.granularity)
+            if time_g < self.total_intervals + 1:
+                self.dropped_credits_map[time_g] += 1
             if self.state.config.record_drops:
                 delay_tuple = self.state.max_queue_delay()
                 length_tuple = self.state.max_queue_length()
@@ -143,8 +144,8 @@ class BreakwaterClient:
         self.window = 0
 
     def restore_dropped_credits(self):
-        current_time_microseconds = int(self.state.timer.get_time() / 1000)
-        self.dropped_credits -= self.dropped_credits_map[current_time_microseconds]
+        current_interval = int(self.state.timer.get_time() / self.granularity)
+        self.dropped_credits -= self.dropped_credits_map[current_interval]
 
 
 
