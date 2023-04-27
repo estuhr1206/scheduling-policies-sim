@@ -83,7 +83,7 @@ class Simulation:
 
             # breakwater
             # restore dropped
-            if self.config.breakwater_enabled and self.state.timer.get_time() % 1000 == 0:
+            if self.config.breakwater_enabled and self.state.timer.get_time() % self.config.BREAKWATER_GRANULARITY == 0:
                 for client_id in self.state.breakwater_server.available_client_ids:
                     self.state.all_clients[client_id].restore_dropped_credits()
             # server control loop
@@ -335,11 +335,12 @@ class Simulation:
         """Mimicking the find next alloc code, as breakwater runs its control loop every RTT, similar
         to how reallocations happen every CORE_REALLOCATION_TIMER
         """
+        temp_timer = min(self.config.BREAKWATER_GRANULARITY, self.config.RTT)
         # next is the next time as per the timer, rather than how many ns in the future the event is
         # next_control_loop = (math.floor(self.state.timer.get_time() / self.config.RTT) + 1) * self.config.RTT
         # return next_control_loop
         # RTTs are on microseconds anyways, so this will capture them
-        next_microsecond = (math.floor(self.state.timer.get_time() / 1000) + 1) * 1000
+        next_microsecond = (math.floor(self.state.timer.get_time() / temp_timer) + 1) * temp_timer
         return next_microsecond
     def find_next_throughput(self):
         """Mimicking the find next alloc code, as breakwater runs its control loop every RTT, similar

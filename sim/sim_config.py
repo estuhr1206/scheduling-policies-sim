@@ -86,6 +86,7 @@ class SimConfig:
         # Constants
 
         # breakwater constants
+        self.BREAKWATER_GRANULARITY = 1000
         self.CLIENT_TIMEOUT = 100000
         self.RTT = 5000
         self.NUM_CLIENTS = 1

@@ -85,6 +85,7 @@
  "bimodal_service_time": false,
  "join_bounded_shortest_queue": false,
  "record_queue_lens": true,
+ "BREAKWATER_GRANULARITY": 100,
  "CLIENT_TIMEOUT": 100000,
  "THROUGHPUT_TIMER": 100000,
  "MAX_CREDITS": 500,
