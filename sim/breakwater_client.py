@@ -40,6 +40,9 @@ class BreakwaterClient:
         self.total_intervals = int(self.state.config.sim_duration / self.granularity)
         self.dropped_credits_map = np.zeros((self.total_intervals + 1))
         self.success_credits_map = np.zeros((self.total_intervals + 1))
+        # just doing delay / 100, since it's scaled by the 10,000. so 10,000/100 = 100
+        # TODO remove this later
+        self.window = 25 + int(self.state.config.RTT / 5000) * 150 + int(self.state.config.BREAKWATER_TARGET_DELAY / 100)
 
     def enqueue_task(self, task):
         self.queue.append(task)
