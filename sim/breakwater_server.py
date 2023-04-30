@@ -10,7 +10,7 @@ class BreakwaterServer:
         self.RTT = RTT
         self.target_delay = TARGET_DELAY
         self.total_credits = 25 + int(self.state.config.RTT / 5000) * 150 + int(self.target_delay / 100)
-        self.credits_issued = 0
+        self.credits_issued = 25 + int(self.state.config.RTT / 5000) * 150 + int(self.target_delay / 100)
         # this will get updated by register
         self.num_clients = 0
         # update clients to be indices, not actual clients, allowing clients to be identified
@@ -103,9 +103,10 @@ class BreakwaterServer:
     def client_register(self, client):
         self.available_client_ids.append(client.id)
         # TODO should this still happen if we are overloaded?
-        self.credits_issued += 1
+        # TODO remove this when done with client initial credits
+        #self.credits_issued += 1
         # now, client should be allowed to spend this credit
-        client.window = 1
+        #client.window = 1
         self.num_clients += 1
         client.client_control_loop()
 
