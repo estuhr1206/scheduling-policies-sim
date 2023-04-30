@@ -49,6 +49,7 @@
  "varyload_over_time": false,
  "no_drops": false,
  "request_timeout": false,
+ "initial_credits": true,
  "load_thread_count": 32,
  "num_tasks": null,
  "sim_duration": 100000000,

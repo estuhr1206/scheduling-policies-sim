@@ -9,8 +9,12 @@ class BreakwaterServer:
         self.state = state
         self.RTT = RTT
         self.target_delay = TARGET_DELAY
-        self.total_credits = 25 + int(self.state.config.RTT / 5000) * 150 + int(self.target_delay / 100)
-        self.credits_issued = 25 + int(self.state.config.RTT / 5000) * 150 + int(self.target_delay / 100)
+        if self.state.config.initial_credits:
+            self.total_credits = 25 + int(self.state.config.RTT / 5000) * 150 + int(self.target_delay / 100)
+            self.credits_issued = 25 + int(self.state.config.RTT / 5000) * 150 + int(self.target_delay / 100)
+        else:
+            self.total_credits = 50
+            self.credits_issued = 0
         # this will get updated by register
         self.num_clients = 0
         # update clients to be indices, not actual clients, allowing clients to be identified
@@ -22,7 +26,11 @@ class BreakwaterServer:
 
         self.credit_pool_records = []
         self.requests_at_once = []
-        self.max_credits = MAX_CREDITS
+        if self.state.config.initial_credits:
+            # TODO 150 is an estimate, should be tested more/calculated better
+            self.max_credits = 25 + int(self.state.config.RTT / 5000) * 150 + int(self.target_delay / 100) + 150
+        else:
+            self.max_credits = MAX_CREDITS
 
         # TODO debugging
         self.debug_records = []
@@ -104,9 +112,10 @@ class BreakwaterServer:
         self.available_client_ids.append(client.id)
         # TODO should this still happen if we are overloaded?
         # TODO remove this when done with client initial credits
-        #self.credits_issued += 1
-        # now, client should be allowed to spend this credit
-        #client.window = 1
+        if not self.state.config.initial_credits:
+            self.credits_issued += 1
+            # now, client should be allowed to spend this credit
+            client.window = 1
         self.num_clients += 1
         client.client_control_loop()
 
