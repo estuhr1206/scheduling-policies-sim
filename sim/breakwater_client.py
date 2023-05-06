@@ -67,7 +67,7 @@ class BreakwaterClient:
         self.c_in_use += 1
 
         current_task = self.queue.popleft()
-        self.current_demand -= 1
+        # self.current_demand -= 1
 
         # check for aqm, if aqm, add some stat for request got dropped
         # breakwater paper: "AQM threshold to 2 · dt (e.g., dt = 80 μs and AQM threshold = 160 μs)"
@@ -152,6 +152,8 @@ class BreakwaterClient:
     def restore_dropped_credits(self):
         current_interval = int(self.state.timer.get_time() / self.granularity)
         self.dropped_credits -= self.dropped_credits_map[current_interval]
+        self.current_demand -= self.dropped_credits_map[current_interval]
+        # TODO add client reattempts for failed tasks?
         self.client_control_loop()
     def check_successes(self):
         current_time = self.state.timer.get_time()
@@ -174,6 +176,7 @@ class BreakwaterClient:
                     the server call
             """
             self.c_in_use -= num_successes
+            self.current_demand -= num_successes
             if current_time % self.state.config.RTT != 0:
                 self.state.breakwater_server.lazy_distribution(self.id)
             

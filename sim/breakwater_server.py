@@ -89,6 +89,7 @@ class BreakwaterServer:
                          Cx - 1)
         else:
             # no credit updates needed
+            # TODO should client control loop happen here?
             return
         # possible for both situations to result in adding or subtracting credits, depending on
         # demand/pool?
