@@ -40,8 +40,10 @@ DEALLOCATIONS_FILE_NAME = 'core_deallocations.csv'
 """
 
 def analyze_sim_run(run_name, arr, plus_minus):
+    if not os.path.exists('deallocations_pdfs'):
+        os.makedirs('deallocations_pdfs')
     pdf_name = "{}.pdf".format(run_name)
-    pdf_path = RESULTS_SUBDIR_NAME.format(run_name) + pdf_name
+    pdf_path = 'deallocations_pdfs/' + pdf_name
     pdf = matplotlib.backends.backend_pdf.PdfPages(pdf_path)
     """
         FILE READ
