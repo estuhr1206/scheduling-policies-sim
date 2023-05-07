@@ -428,6 +428,15 @@ class SimulationState:
             current_interval = 0
             request_rate = loads[current_interval] * config.load_thread_count / config.AVERAGE_SERVICE_TIME
             self.varyload_over_time_records.append([0, loads[current_interval], request_rate])
+        elif config.varyload_by_rtt:
+            # how many RTTs between load shifts
+            num_RTTs = 15
+            RTT_spacing = int(config.RTT * num_RTTs)
+            next_RTT = RTT_spacing
+            loads = [0.1, 0.8]
+            curr_load = 0
+
+            request_rate = loads[curr_load] * config.load_thread_count / config.AVERAGE_SERVICE_TIME
         else:
             request_rate = config.avg_system_load * config.load_thread_count / config.AVERAGE_SERVICE_TIME
 
@@ -444,6 +453,14 @@ class SimulationState:
                     # because this is in init, next_task_time serves as an approximation of the time of the sim
                     # where this shift in load will be seen. It dictates the first arrival of tasks at this new rate
                     self.varyload_over_time_records.append([next_task_time, loads[current_interval], request_rate])
+            elif config.varyload_by_rtt:
+                if next_task_time >= next_RTT:
+                    next_RTT += RTT_spacing
+                    if curr_load == 0:
+                        curr_load = 1
+                    else:
+                        curr_load = 0
+                    request_rate = loads[curr_load] * config.load_thread_count / config.AVERAGE_SERVICE_TIME
             
             service_time = None
             while service_time is None or service_time == 0:

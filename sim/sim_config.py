@@ -19,7 +19,7 @@ class SimConfig:
                  record_queue_lens=False, breakwater_enabled=False, record_breakwater_info=False,
                  record_credit_pool=False, record_drops=False, record_cores_over_time=False,
                  breakwater_debug_info=False, varyload_over_time=False, record_throughput_over_time=False, no_drops=False,
-                 request_timeout=False, record_core_deallocations=False, initial_credits=False):
+                 request_timeout=False, record_core_deallocations=False, initial_credits=False, varyload_by_rtt=False):
 
         # Breakwater configuration
         self.breakwater_enabled = breakwater_enabled
@@ -30,6 +30,7 @@ class SimConfig:
         self.no_drops = no_drops
         self.request_timeout = request_timeout
         self.initial_credits = initial_credits
+        self.varyload_by_rtt = varyload_by_rtt
 
         self.varyload_over_time = varyload_over_time
         self.record_cores_over_time = record_cores_over_time
@@ -150,8 +151,11 @@ class SimConfig:
 
         # breakwater
         if (not self.breakwater_enabled) and (self.record_breakwater_info or self.record_credit_pool or self.record_drops
-                                              or self.breakwater_debug_info):
+                                              or self.breakwater_debug_info or self.varyload_by_rtt):
             print("A breakwater option is enabled without breakwater enabled")
+            return False
+        if self.varyload_by_rtt and self.varyload_over_time:
+            print("two vary load options enabled at the same time, pick one")
             return False
         # TODO remove when multiple clients works
         if self.breakwater_enabled and self.NUM_CLIENTS != 1:

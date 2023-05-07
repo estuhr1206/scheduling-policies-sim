@@ -46,6 +46,7 @@
  "breakwater_enabled": true,
  "breakwater_debug_info": true,
  "varyload_over_time": false,
+ "varyload_by_rtt": false,
  "no_drops": false,
  "request_timeout": false,
  "initial_credits": true,
