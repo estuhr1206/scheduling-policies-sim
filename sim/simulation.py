@@ -588,22 +588,15 @@ class Simulation:
         if self.config.record_drops:
             drops_record_file = open("{}drops_record.csv".format(new_dir_name), "w")
             drops_record_file.write("Time,Available Queues,Credit Pool,Max Delay,Delay ID,Max Length,Length ID,"
-                                    "System Tasks,Client Window,C In Use,C Dropped,Client Demand\n")
+                                    "System Tasks,Client Window,C In Use,C Dropped,Client Demand,Client Qlen\n")
             for record in self.state.all_clients[0].drops_record:
                 drops_record_file.write(",".join([str(x) for x in record]) + "\n")
             drops_record_file.close()
 
-        if self.state.config.record_requests_at_once:
-            requests_at_once_file = open("{}requests_at_once.csv".format(new_dir_name), "w")
-            requests_at_once_file.write("Credits To Send,Demand,Credits Spent\n")
-            for record in self.state.breakwater_server.requests_at_once:
-                requests_at_once_file.write(",".join([str(x) for x in record]) + "\n")
-            requests_at_once_file.close()
-
         # TODO debugging
         if self.config.breakwater_debug_info:
             debugging_file = open("{}debugging.csv".format(new_dir_name), "w")
-            debugging_file.write("Time,Total Credits,Credits To Send,Cx_new,Cx,Client Dropped Credits,Client Demand,Client ID\n")
+            debugging_file.write("Time,Total Credits,Credits To Send,Cx_new,Cx,Client Dropped Credits,Client Demand,Client Qlen,Client ID\n")
             for record in self.state.breakwater_server.debug_records:
                 debugging_file.write(",".join([str(x) for x in record]) + "\n")
             debugging_file.close()
@@ -619,7 +612,7 @@ class Simulation:
         if self.config.record_core_deallocations:
             core_deallocations_file = open("{}core_deallocations.csv".format(new_dir_name), "w")
             core_deallocations_file.write("Time,Available Queues,Credit Pool,Max Delay,Delay ID,"
-                                          "Max Length,Length ID,System Tasks,Client Window,C In Use,C Dropped,Client Demand\n")
+                                          "Max Length,Length ID,System Tasks,Client Window,C In Use,C Dropped,Client Demand,Client Qlen\n")
             for record in self.state.deallocations_records:
                 core_deallocations_file.write(",".join([str(x) for x in record]) + "\n")
             core_deallocations_file.close()

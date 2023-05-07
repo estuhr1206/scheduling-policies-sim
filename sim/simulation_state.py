@@ -318,7 +318,8 @@ class SimulationState:
             self.deallocations_records.append([self.timer.get_time(), len(self.available_queues), self.breakwater_server.total_credits,
                                                delay_tuple[0], delay_tuple[1], length_tuple[0], length_tuple[1], self.total_queue_occupancy(), 
                                                self.all_clients[0].window, self.all_clients[0].c_in_use, 
-                                               self.all_clients[0].dropped_credits, self.all_clients[0].current_demand])
+                                               self.all_clients[0].dropped_credits, self.all_clients[0].current_demand,
+                                               len(self.all_clients[0].queue)])
         # If in replay mode, allow the thread to finish its current task
         if self.config.reallocation_replay and self.threads[thread_id].is_productive():
             self.threads[thread_id].scheduled_dealloc = True

@@ -25,7 +25,6 @@ class BreakwaterServer:
         self.max_delay = 0
 
         self.credit_pool_records = []
-        self.requests_at_once = []
         if self.state.config.initial_credits:
             # TODO 150 is an estimate, should be tested more/calculated better
             self.max_credits = 25 + int(self.state.config.RTT / 5000) * 150 + int(self.target_delay / 100) + 150
@@ -62,7 +61,8 @@ class BreakwaterServer:
         # how breakwater was actually implemented
         
         if self.state.config.record_credit_pool:
-            self.credit_pool_records.append([self.state.timer.get_time(), self.total_credits, self.credits_issued, self.overcommitment_credits])
+            self.credit_pool_records.append([self.state.timer.get_time(), self.total_credits, self.credits_issued,
+                                             self.overcommitment_credits])
 
     def lazy_distribution(self, client_id):
         """
@@ -98,7 +98,8 @@ class BreakwaterServer:
         self.credits_issued += diff
         # TODO debugging
         if diff != 0:
-            debug = [self.state.timer.get_time(), self.total_credits, diff, Cx_new, Cx, client.dropped_credits, client.current_demand, client_id]
+            debug = [self.state.timer.get_time(), self.total_credits, diff, Cx_new, Cx, client.dropped_credits,
+                     client.current_demand, len(client.queue), client_id]
             self.debug_records.append(debug)
 
         # update window, and run client control loop

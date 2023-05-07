@@ -17,7 +17,7 @@ class SimConfig:
                  ideal_reallocation=False, fred_reallocation=False, spin_parking_enabled=False, utilization_range_enabled=False,
                  allow_naive_idle=False, work_steal_park_enabled=False, bimodal_service_time=False, join_bounded_shortest_queue=False,
                  record_queue_lens=False, breakwater_enabled=False, record_breakwater_info=False,
-                 record_credit_pool=False, record_drops=False, record_requests_at_once=False, record_cores_over_time=False,
+                 record_credit_pool=False, record_drops=False, record_cores_over_time=False,
                  breakwater_debug_info=False, varyload_over_time=False, record_throughput_over_time=False, no_drops=False,
                  request_timeout=False, record_core_deallocations=False, initial_credits=False):
 
@@ -26,7 +26,6 @@ class SimConfig:
         self.record_breakwater_info = record_breakwater_info
         self.record_credit_pool = record_credit_pool
         self.record_drops = record_drops
-        self.record_requests_at_once = record_requests_at_once
         self.breakwater_debug_info = breakwater_debug_info
         self.no_drops = no_drops
         self.request_timeout = request_timeout
@@ -151,7 +150,7 @@ class SimConfig:
 
         # breakwater
         if (not self.breakwater_enabled) and (self.record_breakwater_info or self.record_credit_pool or self.record_drops
-                                              or self.record_requests_at_once or self.breakwater_debug_info):
+                                              or self.breakwater_debug_info):
             print("A breakwater option is enabled without breakwater enabled")
             return False
         # TODO remove when multiple clients works

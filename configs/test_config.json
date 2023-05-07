@@ -43,7 +43,6 @@
  "record_credit_pool": true,
  "record_breakwater_info": true,
  "record_drops": true,
- "record_requests_at_once": false,
  "breakwater_enabled": true,
  "breakwater_debug_info": true,
  "varyload_over_time": false,

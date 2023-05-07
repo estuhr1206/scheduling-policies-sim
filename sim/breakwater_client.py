@@ -106,7 +106,7 @@ class BreakwaterClient:
                 length_tuple = self.state.max_queue_length()
                 self.drops_record.append([current_time, len(self.state.available_queues), self.state.breakwater_server.total_credits,
                                           delay_tuple[0], delay_tuple[1], length_tuple[0], length_tuple[1], self.state.total_queue_occupancy(), 
-                                          self.window, self.c_in_use, self.dropped_credits, self.current_demand])
+                                          self.window, self.c_in_use, self.dropped_credits, self.current_demand, len(self.queue)])
             if self.state.config.record_queue_lens:
                 self.state.record_queue_lengths()
             return False
@@ -118,19 +118,19 @@ class BreakwaterClient:
     
     def client_control_loop(self, from_server=False):
         if self.current_demand < 0:
-                raise ValueError('error, demand was below 0')
+            raise ValueError('error, demand was below 0')
         if self.state.config.request_timeout:
-            while self.current_demand > 0:
+            while len(self.queue) > 0:
                 current_task = self.queue[0]
                 if current_task.arrival_time <= self.state.timer.get_time() - self.state.config.CLIENT_TIMEOUT:
                     self.queue.popleft()
-                    self.current_demand -= 1
+                    # self.current_demand -= 1
                     self.timed_out_tasks += 1
                 else:
                     break
 
         self.c_unused = self.window - (self.c_in_use + self.dropped_credits)
-        while self.current_demand > 0 and self.c_unused > 0:
+        while len(self.queue) > 0 and self.c_unused > 0:
             if from_server:
                 self.tasks_spent_control_loop += 1
             self.spend_credits()
