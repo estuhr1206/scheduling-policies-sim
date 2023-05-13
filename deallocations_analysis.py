@@ -56,7 +56,7 @@ def analyze_sim_run(run_name, arr, plus_minus):
     throughput_file = RESULTS_SUBDIR_NAME.format(run_name) + THROUGHPUT_FILE_NAME
 
     df = pandas.read_csv(credits_file)
-    Data = df[['Time', 'Throughput']]
+    Data = df[['Time', 'Total Credits']]
     credits_data = np.array(Data)
 
     df = pandas.read_csv(throughput_file)
@@ -260,7 +260,7 @@ def analyze_sim_run(run_name, arr, plus_minus):
         print("plotting xrange: {}".format(xcenter_int))
         curr_min = xcenter_int - plus_minus
         curr_max = xcenter_int + plus_minus
-        for curr_plot in [plt1, plt2, plt3, plt4, plt5, plt6]:
+        for curr_plot in [plt1, plt2, plt3, plt4, plt5, plt6, plt7]:
             curr_plot.axis(xmin=curr_min, xmax=curr_max)
         pdf.savefig(fig)
     pdf.close()
@@ -310,7 +310,9 @@ def main():
         print("File or directory not found")
 
     for sim_name in sim_list:
-        analyze_sim_run(sim_name.strip(), get_xcenters(sim_name.strip(), buffer), plus_minus)
+        # analyze_sim_run(sim_name.strip(), get_xcenters(sim_name.strip(), buffer), plus_minus)
+        centers = [0, 25000, 26000, 27000, 50000, 75000, 100000]
+        analyze_sim_run(sim_name.strip(), centers, plus_minus)
         print("Simulation {} analysis complete".format(sim_name))
 
     print("All analysis complete")
