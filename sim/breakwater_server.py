@@ -21,7 +21,7 @@ class BreakwaterServer:
         self.available_client_ids = []
         self.AGGRESSIVENESS_ALPHA = ALPHA
         self.BETA = BETA
-        self.overcommitment_credits = 0
+        self.overcommitment_credits = 1
         self.max_delay = 0
 
         self.credit_pool_records = []
@@ -49,11 +49,11 @@ class BreakwaterServer:
 
         credits_to_send = self.total_credits - self.credits_issued
         # overcommitment seems to allow massive amounts of credits to build up at client
-        self.overcommitment_credits = max(int(credits_to_send / self.num_clients), 1)
-        
+
         # TODO debugging on single client, needs to be adjusted to multiple clients
         # Technically not needed, lazy dist would be called on completions
         if self.num_clients > 0:
+            self.overcommitment_credits = max(int(credits_to_send / self.num_clients), 1)
             self.lazy_distribution(0)
         # update: credits will now be sent upon task completion to better emulate
         # how breakwater was actually implemented
@@ -115,6 +115,8 @@ class BreakwaterServer:
         # now, client should be allowed to spend this credit
         client.window = 1
         self.num_clients += 1
+        self.overcommitment_credits = max(int((self.total_credits - self.credits_issued) / self.num_clients), 1)
+        # first task comes in with register request
         client.spend_credits()
         self.lazy_distribution(client.id)
         # extra call, client should be able to do something no matter what
@@ -122,7 +124,7 @@ class BreakwaterServer:
 
     def client_deregister(self, client):
         # credits yielded by client
-        # should this just be window?
+        # TODO should this just be window?
         self.credits_issued -= client.window
 
         self.available_client_ids.remove(client.id)

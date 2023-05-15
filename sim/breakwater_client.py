@@ -40,7 +40,6 @@ class BreakwaterClient:
         self.total_intervals = int(self.state.config.sim_duration / self.granularity)
         self.dropped_credits_map = np.zeros((self.total_intervals + 1))
         self.success_credits_map = np.zeros((self.total_intervals + 1))
-        self.window = 0
 
     def enqueue_task(self, task):
         self.queue.append(task)
@@ -134,7 +133,6 @@ class BreakwaterClient:
             # if self.spend_credits() == False:
             #     tasks_dropped += 1
 
-
     # simplify debugging, don't deregister
     def deregister(self):
         # important that this call to server is first, as it will take back credits the client currently has
@@ -151,6 +149,7 @@ class BreakwaterClient:
         self.current_demand -= self.dropped_credits_map[current_interval]
         # TODO add client reattempts for failed tasks?
         self.client_control_loop()
+
     def check_successes(self):
         current_time = self.state.timer.get_time()
         current_interval = int(current_time / self.granularity)
