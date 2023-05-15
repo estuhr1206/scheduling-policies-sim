@@ -52,10 +52,8 @@ class BreakwaterServer:
         self.overcommitment_credits = max(int(credits_to_send / self.num_clients), 1)
         
         # TODO debugging on single client, needs to be adjusted to multiple clients
-        # i think this every rtt could be considered "explicit" as needed
+        # Technically not needed, lazy dist would be called on completions
         if self.num_clients > 0:
-            #self.send_credits(int(credits_to_send))
-            # self.state.all_clients[0].dropped_credits = 0
             self.lazy_distribution(0)
         # update: credits will now be sent upon task completion to better emulate
         # how breakwater was actually implemented
@@ -113,12 +111,13 @@ class BreakwaterServer:
     def client_register(self, client):
         self.available_client_ids.append(client.id)
         # TODO should this still happen if we are overloaded?
-        # TODO remove this when done with client initial credits
-        if not self.state.config.initial_credits:
-            self.credits_issued += 1
-            # now, client should be allowed to spend this credit
-            client.window = 1
+        self.credits_issued += 1
+        # now, client should be allowed to spend this credit
+        client.window = 1
         self.num_clients += 1
+        client.spend_credits()
+        self.lazy_distribution(client.id)
+        # extra call, client should be able to do something no matter what
         client.client_control_loop()
 
     def client_deregister(self, client):
