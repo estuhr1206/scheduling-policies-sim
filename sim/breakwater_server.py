@@ -11,10 +11,10 @@ class BreakwaterServer:
         self.target_delay = TARGET_DELAY
         if self.state.config.initial_credits:
             self.total_credits = 25 + int(self.state.config.RTT / 5000) * 150 + int(self.target_delay / 100)
-            self.credits_issued = 25 + int(self.state.config.RTT / 5000) * 150 + int(self.target_delay / 100)
+            # self.credits_issued = 25 + int(self.state.config.RTT / 5000) * 150 + int(self.target_delay / 100)
         else:
             self.total_credits = 50
-            self.credits_issued = 0
+        self.credits_issued = 0
         # this will get updated by register
         self.num_clients = 0
         # update clients to be indices, not actual clients, allowing clients to be identified
