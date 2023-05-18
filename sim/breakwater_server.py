@@ -47,13 +47,10 @@ class BreakwaterServer:
             reduction = max(1.0 - self.BETA*((max_delay - self.target_delay)/self.target_delay), 0.5)
             self.total_credits = int(self.total_credits * reduction)
 
-        credits_to_send = self.total_credits - self.credits_issued
-        # overcommitment seems to allow massive amounts of credits to build up at client
-
         # TODO debugging on single client, needs to be adjusted to multiple clients
         # Technically not needed, lazy dist would be called on completions
+        # also a bit dangerous, isn't delayed by an RTT?
         if self.num_clients > 0:
-            self.overcommitment_credits = max(int(credits_to_send / self.num_clients), 1)
             self.lazy_distribution(0)
         # update: credits will now be sent upon task completion to better emulate
         # how breakwater was actually implemented
@@ -72,6 +69,7 @@ class BreakwaterServer:
         """
         client = self.state.all_clients[client_id]
         available_credits = self.total_credits - self.credits_issued
+        self.overcommitment_credits = max(int(available_credits / self.num_clients), 1)
         # Cx_new = 0
         Cx = client.window
         if available_credits > 0:
@@ -88,6 +86,7 @@ class BreakwaterServer:
         else:
             # no credit updates needed
             # TODO should client control loop happen here?
+            client.client_control_loop(from_server=True)
             return
         # possible for both situations to result in adding or subtracting credits, depending on
         # demand/pool?

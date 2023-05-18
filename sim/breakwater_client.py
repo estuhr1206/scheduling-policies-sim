@@ -129,9 +129,6 @@ class BreakwaterClient:
             if from_server:
                 self.tasks_spent_control_loop += 1
             self.spend_credits()
-            # seems like no need, can just decrement in_use
-            # if self.spend_credits() == False:
-            #     tasks_dropped += 1
 
     # simplify debugging, don't deregister
     def deregister(self):
@@ -145,10 +142,13 @@ class BreakwaterClient:
 
     def restore_dropped_credits(self):
         current_interval = int(self.state.timer.get_time() / self.granularity)
-        self.dropped_credits -= self.dropped_credits_map[current_interval]
-        self.current_demand -= self.dropped_credits_map[current_interval]
+        num_dropped = self.dropped_credits_map[current_interval]
+        if num_dropped > 0:
+            self.dropped_credits -= num_dropped
+            self.current_demand -= num_dropped
+            return True
+        return False
         # TODO add client reattempts for failed tasks?
-        self.client_control_loop()
 
     def check_successes(self):
         current_time = self.state.timer.get_time()
@@ -161,7 +161,7 @@ class BreakwaterClient:
                 This call to the server represents that the server would have
                 done the lazy distribution when the task completed at the server.
 
-                The reponse has been delayed by an RTT to the client, therefore,
+                The response has been delayed by an RTT to the client, therefore,
                 here we are delayed by an RTT at the client, so we may have the server
                 do this instantly to simulate it simply being delayed an RTT
 
@@ -172,8 +172,8 @@ class BreakwaterClient:
             """
             self.c_in_use -= num_successes
             self.current_demand -= num_successes
-            if current_time % self.state.config.RTT != 0:
-                self.state.breakwater_server.lazy_distribution(self.id)
+            return True
+        return False
             
 
 

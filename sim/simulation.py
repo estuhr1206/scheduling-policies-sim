@@ -85,8 +85,11 @@ class Simulation:
             # restore dropped
             if self.config.breakwater_enabled and self.state.timer.get_time() % self.config.BREAKWATER_GRANULARITY == 0:
                 for client_id in self.state.breakwater_server.available_client_ids:
-                    self.state.all_clients[client_id].check_successes()
-                    self.state.all_clients[client_id].restore_dropped_credits()
+                    if self.state.all_clients[client_id].check_successes() or \
+                            self.state.all_clients[client_id].restore_dropped_credits():
+                        # if any response, also redistribute credits
+                        self.state.breakwater_server.lazy_distribution(client_id)
+
             # server control loop
             if self.config.breakwater_enabled and self.state.timer.get_time() % self.config.RTT == 0:
                 max_delay = self.state.max_queue_delay()[0]
