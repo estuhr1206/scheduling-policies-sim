@@ -95,6 +95,7 @@ class SimConfig:
         self.BREAKWATER_AGGRESSIVENESS_ALPHA = 0.001
         self.BREAKWATER_BETA = 0.02
         self.MAX_CREDITS = 100
+        self.SERVER_INITIAL_CREDITS = 50
 
         self.THROUGHPUT_TIMER = 5000
 

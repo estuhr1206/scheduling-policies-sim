@@ -87,7 +87,7 @@ class Simulation:
                 for client_id in self.state.breakwater_server.available_client_ids:
                     any_successes = self.state.all_clients[client_id].check_successes()
                     any_drops = self.state.all_clients[client_id].restore_dropped_credits()
-                    if  any_successes or any_drops:
+                    if any_successes or any_drops:
                         # if any response, also redistribute credits
                         self.state.breakwater_server.lazy_distribution(client_id)
 

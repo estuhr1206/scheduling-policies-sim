@@ -13,7 +13,7 @@ class BreakwaterServer:
             self.total_credits = 25 + int(self.state.config.RTT / 5000) * 150 + int(self.target_delay / 100)
             # self.credits_issued = 25 + int(self.state.config.RTT / 5000) * 150 + int(self.target_delay / 100)
         else:
-            self.total_credits = 50
+            self.total_credits = self.state.config.SERVER_INITIAL_CREDITS
         self.credits_issued = 0
         # this will get updated by register
         self.num_clients = 0
