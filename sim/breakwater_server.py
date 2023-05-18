@@ -48,13 +48,11 @@ class BreakwaterServer:
             self.total_credits = int(self.total_credits * reduction)
 
         # TODO debugging on single client, needs to be adjusted to multiple clients
-        # Technically not needed, lazy dist would be called on completions
-        # also a bit dangerous, isn't delayed by an RTT?
+        # TODO Technically not needed, lazy dist would be called on completions
+        # also a bit dangerous, isn't delayed by an RTT? Can remove later, need to test incrementally
         if self.num_clients > 0:
             self.lazy_distribution(0)
-        # update: credits will now be sent upon task completion to better emulate
-        # how breakwater was actually implemented
-        
+
         if self.state.config.record_credit_pool:
             self.credit_pool_records.append([self.state.timer.get_time(), self.total_credits, self.credits_issued,
                                              self.overcommitment_credits])
@@ -72,6 +70,8 @@ class BreakwaterServer:
         self.overcommitment_credits = max(int(available_credits / self.num_clients), 1)
         # Cx_new = 0
         Cx = client.window
+        # here, demand doesn't go down until responses from success/failure are received
+        # with instant credit communication, this is effectively the same as num_pending
         if available_credits > 0:
             Cx_new = min(client.current_demand + self.overcommitment_credits,
                          Cx + available_credits)
@@ -80,7 +80,6 @@ class BreakwaterServer:
             # grab calculation from paper
             # demand + overcommitment is at least 1 (with 0 demand)
             # what if client is already at 0 credits?
-            # num pending?
             Cx_new = min(client.current_demand + self.overcommitment_credits,
                          Cx - 1)
         else:
@@ -114,11 +113,13 @@ class BreakwaterServer:
         # now, client should be allowed to spend this credit
         client.window = 1
         self.num_clients += 1
-        self.overcommitment_credits = max(int((self.total_credits - self.credits_issued) / self.num_clients), 1)
         # first task comes in with register request
         client.spend_credits()
+        # setting OC for lazy dist call
+        self.overcommitment_credits = max(int((self.total_credits - self.credits_issued) / self.num_clients), 1)
         self.lazy_distribution(client.id)
-        # extra call, client should be able to do something no matter what
+        # TODO not needed if call is always present in lazy distribution
+        #  extra call, client should be able to do something no matter what
         client.client_control_loop()
 
     def client_deregister(self, client):
