@@ -50,6 +50,7 @@
  "no_drops": false,
  "request_timeout": false,
  "initial_credits": true,
+ "zero_initial_cores": false,
  "load_thread_count": 32,
  "num_tasks": null,
  "sim_duration": 100000000,
