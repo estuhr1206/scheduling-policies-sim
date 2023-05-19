@@ -34,10 +34,12 @@ class BreakwaterClient:
         self.dropped_credits = 0
 
         self.id = identifier
+        self.granularity = self.state.config.BREAKWATER_GRANULARITY
         # currently, 100,000 microseconds in 0.1 seconds of simulated time
         # can adjust if sim time is changing.
-        self.total_num_microseconds = int(self.state.config.sim_duration / 1000)
-        self.dropped_credits_map = np.zeros((self.total_num_microseconds + 1))
+        self.total_intervals = int(self.state.config.sim_duration / self.granularity)
+        self.dropped_credits_map = np.zeros((self.total_intervals + 1))
+        self.success_credits_map = np.zeros((self.total_intervals + 1))
 
     def enqueue_task(self, task):
         self.queue.append(task)
@@ -60,7 +62,7 @@ class BreakwaterClient:
         self.c_in_use += 1
 
         current_task = self.queue.popleft()
-        self.current_demand -= 1
+        # self.current_demand -= 1
 
         # check for aqm, if aqm, add some stat for request got dropped
         # breakwater paper: "AQM threshold to 2 · dt (e.g., dt = 80 μs and AQM threshold = 160 μs)"
@@ -91,15 +93,15 @@ class BreakwaterClient:
             self.dropped_tasks += 1
             self.dropped_credits += 1
             current_time = self.state.timer.get_time()
-            time_microseconds = int(current_time / 1000) + int(self.state.config.RTT / 1000)
-            if time_microseconds < self.total_num_microseconds + 1:
-                self.dropped_credits_map[time_microseconds] += 1
+            time_g = int(current_time / self.granularity) + int(self.state.config.RTT / self.granularity)
+            if time_g < self.total_intervals + 1:
+                self.dropped_credits_map[time_g] += 1
             if self.state.config.record_drops:
                 delay_tuple = self.state.max_queue_delay()
                 length_tuple = self.state.max_queue_length()
                 self.drops_record.append([current_time, len(self.state.available_queues), self.state.breakwater_server.total_credits,
                                           delay_tuple[0], delay_tuple[1], length_tuple[0], length_tuple[1], self.state.total_queue_occupancy(), 
-                                          self.window, self.c_in_use, self.dropped_credits, self.current_demand])
+                                          self.window, self.c_in_use, self.dropped_credits, self.current_demand, len(self.queue)])
             if self.state.config.record_queue_lens:
                 self.state.record_queue_lengths()
             return False
@@ -111,26 +113,22 @@ class BreakwaterClient:
     
     def client_control_loop(self, from_server=False):
         if self.current_demand < 0:
-                raise ValueError('error, demand was below 0')
+            raise ValueError('error, demand was below 0')
         if self.state.config.request_timeout:
-            while self.current_demand > 0:
+            while len(self.queue) > 0:
                 current_task = self.queue[0]
                 if current_task.arrival_time <= self.state.timer.get_time() - self.state.config.CLIENT_TIMEOUT:
                     self.queue.popleft()
-                    self.current_demand -= 1
+                    # self.current_demand -= 1
                     self.timed_out_tasks += 1
                 else:
                     break
 
         self.c_unused = self.window - (self.c_in_use + self.dropped_credits)
-        while self.current_demand > 0 and self.c_unused > 0:
+        while len(self.queue) > 0 and self.c_unused > 0:
             if from_server:
                 self.tasks_spent_control_loop += 1
             self.spend_credits()
-            # seems like no need, can just decrement in_use
-            # if self.spend_credits() == False:
-            #     tasks_dropped += 1
-
 
     # simplify debugging, don't deregister
     def deregister(self):
@@ -143,8 +141,40 @@ class BreakwaterClient:
         self.window = 0
 
     def restore_dropped_credits(self):
-        current_time_microseconds = int(self.state.timer.get_time() / 1000)
-        self.dropped_credits -= self.dropped_credits_map[current_time_microseconds]
+        current_interval = int(self.state.timer.get_time() / self.granularity)
+        num_dropped = self.dropped_credits_map[current_interval]
+        if num_dropped > 0:
+            self.dropped_credits -= num_dropped
+            self.current_demand -= num_dropped
+            return True
+        return False
+        # TODO add client reattempts for failed tasks?
+
+    def check_successes(self):
+        current_time = self.state.timer.get_time()
+        current_interval = int(current_time / self.granularity)
+        num_successes = self.success_credits_map[current_interval]
+        if num_successes > 0:
+            """
+                a bit odd to call this here, but server side logic is still
+                instant.
+                This call to the server represents that the server would have
+                done the lazy distribution when the task completed at the server.
+
+                The response has been delayed by an RTT to the client, therefore,
+                here we are delayed by an RTT at the client, so we may have the server
+                do this instantly to simulate it simply being delayed an RTT
+
+                edit: I don't think this matters-, so swapping to not need another client control
+                loop call
+                    note: this means that the client in use credits ought to be updated AFTER
+                    the server call
+            """
+            self.c_in_use -= num_successes
+            self.current_demand -= num_successes
+            return True
+        return False
+            
 
 
 

@@ -53,7 +53,9 @@ class Simulation:
 
         if self.config.progress_bar:
             print("\nSimulation started")
-
+        if self.config.zero_initial_cores:
+            for thread in self.state.threads:
+                self.state.deallocate_thread(thread.id)
         # Run for acceptable time or until all tasks are done
         while self.state.any_incomplete() and \
                 (self.config.sim_duration is None or self.state.timer.get_time() < self.config.sim_duration):
@@ -82,14 +84,18 @@ class Simulation:
                 task_number += 1
 
             # breakwater
-            # restore dropped
-            if self.config.breakwater_enabled and self.state.timer.get_time() % 1000 == 0:
-                for client_id in self.state.breakwater_server.available_client_ids:
-                    self.state.all_clients[client_id].restore_dropped_credits()
             # server control loop
             if self.config.breakwater_enabled and self.state.timer.get_time() % self.config.RTT == 0:
                 max_delay = self.state.max_queue_delay()[0]
                 self.state.breakwater_server.control_loop(max_delay)
+            # restore dropped
+            if self.config.breakwater_enabled and self.state.timer.get_time() % self.config.BREAKWATER_GRANULARITY == 0:
+                for client_id in self.state.breakwater_server.available_client_ids:
+                    any_successes = self.state.all_clients[client_id].check_successes()
+                    any_drops = self.state.all_clients[client_id].restore_dropped_credits()
+                    if any_successes or any_drops or self.state.timer.get_time() % self.config.RTT == 0:
+                        # if any response, also redistribute credits
+                        self.state.breakwater_server.lazy_distribution(client_id)
 
             if self.config.record_throughput_over_time and self.state.timer.get_time() % self.config.THROUGHPUT_TIMER == 0:
                 current_throughput = (self.state.current_completed_tasks / self.config.THROUGHPUT_TIMER) * 10**9
@@ -336,11 +342,15 @@ class Simulation:
         to how reallocations happen every CORE_REALLOCATION_TIMER
         """
         # next is the next time as per the timer, rather than how many ns in the future the event is
-        # next_control_loop = (math.floor(self.state.timer.get_time() / self.config.RTT) + 1) * self.config.RTT
-        # return next_control_loop
-        # RTTs are on microseconds anyways, so this will capture them
-        next_microsecond = (math.floor(self.state.timer.get_time() / 1000) + 1) * 1000
-        return next_microsecond
+        next_control_loop = (math.floor(self.state.timer.get_time() / self.config.RTT) + 1) * self.config.RTT
+        return next_control_loop
+    def find_next_breakwater_granularity(self):
+        """Mimicking the find next alloc code, similar to how reallocations happen every CORE_REALLOCATION_TIMER
+            Breakwater will report failures and successes at a certain granularity
+        """
+        # next is the next time as per the timer, rather than how many ns in the future the event is
+        next_time = (math.floor(self.state.timer.get_time() / self.config.BREAKWATER_GRANULARITY) + 1) * self.config.BREAKWATER_GRANULARITY
+        return next_time
     def find_next_throughput(self):
         """Mimicking the find next alloc code, as breakwater runs its control loop every RTT, similar
         to how reallocations happen every CORE_REALLOCATION_TIMER
@@ -433,8 +443,11 @@ class Simulation:
 
                 even with lazy distribution, next_completion_time should cover this
             """
-            next_breakwater = self.find_next_breakwater_control_loop()
+            next_RTT = self.find_next_breakwater_control_loop()
+            upcoming_events.append(next_RTT)
+            next_breakwater = self.find_next_breakwater_granularity()
             upcoming_events.append(next_breakwater)
+
         if self.config.record_throughput_over_time:
             next_throughput = self.find_next_throughput()
             upcoming_events.append(next_throughput)
@@ -580,22 +593,15 @@ class Simulation:
         if self.config.record_drops:
             drops_record_file = open("{}drops_record.csv".format(new_dir_name), "w")
             drops_record_file.write("Time,Available Queues,Credit Pool,Max Delay,Delay ID,Max Length,Length ID,"
-                                    "System Tasks,Client Window,C In Use,C Dropped,Client Demand\n")
+                                    "System Tasks,Client Window,C In Use,C Dropped,Client Demand,Client Qlen\n")
             for record in self.state.all_clients[0].drops_record:
                 drops_record_file.write(",".join([str(x) for x in record]) + "\n")
             drops_record_file.close()
 
-        if self.state.config.record_requests_at_once:
-            requests_at_once_file = open("{}requests_at_once.csv".format(new_dir_name), "w")
-            requests_at_once_file.write("Credits To Send,Demand,Credits Spent\n")
-            for record in self.state.breakwater_server.requests_at_once:
-                requests_at_once_file.write(",".join([str(x) for x in record]) + "\n")
-            requests_at_once_file.close()
-
         # TODO debugging
         if self.config.breakwater_debug_info:
             debugging_file = open("{}debugging.csv".format(new_dir_name), "w")
-            debugging_file.write("Time,Total Credits,Credits To Send,Cx_new,Cx,Client Dropped Credits,Client Demand,Client ID\n")
+            debugging_file.write("Time,Total Credits,Credits To Send,Cx_new,Cx,Client Dropped Credits,Client Demand,Client Qlen,Client ID\n")
             for record in self.state.breakwater_server.debug_records:
                 debugging_file.write(",".join([str(x) for x in record]) + "\n")
             debugging_file.close()
@@ -611,7 +617,7 @@ class Simulation:
         if self.config.record_core_deallocations:
             core_deallocations_file = open("{}core_deallocations.csv".format(new_dir_name), "w")
             core_deallocations_file.write("Time,Available Queues,Credit Pool,Max Delay,Delay ID,"
-                                          "Max Length,Length ID,System Tasks,Client Window,C In Use,C Dropped,Client Demand\n")
+                                          "Max Length,Length ID,System Tasks,Client Window,C In Use,C Dropped,Client Demand,Client Qlen\n")
             for record in self.state.deallocations_records:
                 core_deallocations_file.write(",".join([str(x) for x in record]) + "\n")
             core_deallocations_file.close()

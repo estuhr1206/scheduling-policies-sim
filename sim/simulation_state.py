@@ -318,7 +318,8 @@ class SimulationState:
             self.deallocations_records.append([self.timer.get_time(), len(self.available_queues), self.breakwater_server.total_credits,
                                                delay_tuple[0], delay_tuple[1], length_tuple[0], length_tuple[1], self.total_queue_occupancy(), 
                                                self.all_clients[0].window, self.all_clients[0].c_in_use, 
-                                               self.all_clients[0].dropped_credits, self.all_clients[0].current_demand])
+                                               self.all_clients[0].dropped_credits, self.all_clients[0].current_demand,
+                                               len(self.all_clients[0].queue)])
         # If in replay mode, allow the thread to finish its current task
         if self.config.reallocation_replay and self.threads[thread_id].is_productive():
             self.threads[thread_id].scheduled_dealloc = True
@@ -416,8 +417,8 @@ class SimulationState:
         # sim duration typically .1s, aka 100,000,000 ns
         if config.varyload_over_time:
             interval_list = []
-            loads = [0.2, 0.4, 0.6, 0.8]
-            # loads = [0.2, 0.5, 1.4]
+            # loads = [0.2, 0.4, 0.6, 0.8]
+            loads = [1.0, 0.2, 0.5, 1.4]
             interval_increment = config.sim_duration / len(loads)
             interval_value = interval_increment
             for temp_i in range(len(loads)):
@@ -427,6 +428,15 @@ class SimulationState:
             current_interval = 0
             request_rate = loads[current_interval] * config.load_thread_count / config.AVERAGE_SERVICE_TIME
             self.varyload_over_time_records.append([0, loads[current_interval], request_rate])
+        elif config.varyload_by_rtt:
+            # how many RTTs between load shifts
+            num_RTTs = 15
+            RTT_spacing = int(config.RTT * num_RTTs)
+            next_RTT = RTT_spacing
+            loads = [0.1, 0.8]
+            curr_load = 0
+
+            request_rate = loads[curr_load] * config.load_thread_count / config.AVERAGE_SERVICE_TIME
         else:
             request_rate = config.avg_system_load * config.load_thread_count / config.AVERAGE_SERVICE_TIME
 
@@ -443,6 +453,14 @@ class SimulationState:
                     # because this is in init, next_task_time serves as an approximation of the time of the sim
                     # where this shift in load will be seen. It dictates the first arrival of tasks at this new rate
                     self.varyload_over_time_records.append([next_task_time, loads[current_interval], request_rate])
+            elif config.varyload_by_rtt:
+                if next_task_time >= next_RTT:
+                    next_RTT += RTT_spacing
+                    if curr_load == 0:
+                        curr_load = 1
+                    else:
+                        curr_load = 0
+                    request_rate = loads[curr_load] * config.load_thread_count / config.AVERAGE_SERVICE_TIME
             
             service_time = None
             while service_time is None or service_time == 0:

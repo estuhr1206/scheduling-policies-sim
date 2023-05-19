@@ -40,19 +40,24 @@ DEALLOCATIONS_FILE_NAME = 'core_deallocations.csv'
 """
 
 def analyze_sim_run(run_name, arr, plus_minus):
+    if not os.path.exists('deallocations_pdfs'):
+        os.makedirs('deallocations_pdfs')
     pdf_name = "{}.pdf".format(run_name)
-    pdf_path = RESULTS_SUBDIR_NAME.format(run_name) + pdf_name
+    pdf_path = 'deallocations_pdfs/' + pdf_name
     pdf = matplotlib.backends.backend_pdf.PdfPages(pdf_path)
     """
         FILE READ
     """
-
+    credits_file = RESULTS_SUBDIR_NAME.format(run_name) + CREDITS_FILE_NAME
     task_file = RESULTS_SUBDIR_NAME.format(run_name) + TASK_FILE_NAME
     drops_file = RESULTS_SUBDIR_NAME.format(run_name) + DROPS_FILE_NAME
     deallocations_file = RESULTS_SUBDIR_NAME.format(run_name) + DEALLOCATIONS_FILE_NAME
     core_file = RESULTS_SUBDIR_NAME.format(run_name) + CORES_FILE_NAME
     throughput_file = RESULTS_SUBDIR_NAME.format(run_name) + THROUGHPUT_FILE_NAME
 
+    df = pandas.read_csv(credits_file)
+    Data = df[['Time', 'Total Credits']]
+    credits_data = np.array(Data)
 
     df = pandas.read_csv(throughput_file)
     Data = df[['Time', 'Throughput']]
@@ -103,7 +108,7 @@ def analyze_sim_run(run_name, arr, plus_minus):
         PLOTTING
     """
 
-    fig, (plt1, plt2, plt3, plt4, plt5, plt6) = plt.subplots(6, 1, figsize=(20,28))
+    fig, (plt1, plt2, plt3, plt4, plt5, plt6, plt7) = plt.subplots(7, 1, figsize=(20,32))
     # TODO this can be something better
     fig.suptitle(run_name, fontsize=22, y=0.90)
     x_range = [0, 100000]
@@ -111,7 +116,7 @@ def analyze_sim_run(run_name, arr, plus_minus):
     # for every us? Is that granular enough
     # took ~ 6 minutes to plot with 100,000 bins
     # took < 1 min for 10,000 bins
-    num_bins = 100000
+    num_bins = 10000
     """
     PLOT 1
     """
@@ -224,6 +229,23 @@ def analyze_sim_run(run_name, arr, plus_minus):
     plt6.set_xlabel('Time (microseconds)', fontsize=18)
     plt6.set_ylabel('Throughput per second', fontsize=18)
 
+    """
+        PLOT 7
+    """
+    plt7.tick_params(axis='both', which='major', labelsize=18)
+
+    plt7.axis(xmin=x_range[0], xmax=x_range[1])
+    # plt7.axis(ymin=0, ymax=28)
+    plt7.grid(which='major', color='black', linewidth=1.0)
+    plt7.grid(which='minor', color='grey', linewidth=0.2)
+    plt7.minorticks_on()
+    # plt.ylim(ymin=0)
+
+    plt7.plot(credits_data[:, 0] / 1000, credits_data[:, 1], rasterized=rasterize)
+
+    plt7.set_xlabel('Time (microseconds)', fontsize=18)
+    plt7.set_ylabel('Credit Pool', fontsize=18)
+
 
 
     # file_name = run_name + 'time_series.png'
@@ -238,7 +260,7 @@ def analyze_sim_run(run_name, arr, plus_minus):
         print("plotting xrange: {}".format(xcenter_int))
         curr_min = xcenter_int - plus_minus
         curr_max = xcenter_int + plus_minus
-        for curr_plot in [plt1, plt2, plt3, plt4, plt5, plt6]:
+        for curr_plot in [plt1, plt2, plt3, plt4, plt5, plt6, plt7]:
             curr_plot.axis(xmin=curr_min, xmax=curr_max)
         pdf.savefig(fig)
     pdf.close()
@@ -288,7 +310,9 @@ def main():
         print("File or directory not found")
 
     for sim_name in sim_list:
-        analyze_sim_run(sim_name.strip(), get_xcenters(sim_name.strip(), buffer), plus_minus)
+        # analyze_sim_run(sim_name.strip(), get_xcenters(sim_name.strip(), buffer), plus_minus)
+        centers = [0, 25000, 26000, 27000, 50000, 75000, 100000]
+        analyze_sim_run(sim_name.strip(), centers, plus_minus)
         print("Simulation {} analysis complete".format(sim_name))
 
     print("All analysis complete")
