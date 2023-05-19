@@ -50,8 +50,8 @@ class BreakwaterServer:
         # TODO debugging on single client, needs to be adjusted to multiple clients
         # TODO Technically not needed, lazy dist would be called on completions
         # also a bit dangerous, isn't delayed by an RTT? Can remove later, need to test incrementally
-        if self.num_clients > 0:
-            self.lazy_distribution(0)
+        # if self.num_clients > 0:
+        #     self.lazy_distribution(0)
 
         if self.state.config.record_credit_pool:
             self.credit_pool_records.append([self.state.timer.get_time(), self.total_credits, self.credits_issued,
