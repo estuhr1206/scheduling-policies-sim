@@ -20,7 +20,7 @@ class SimConfig:
                  record_credit_pool=False, record_drops=False, record_cores_over_time=False,
                  breakwater_debug_info=False, varyload_over_time=False, record_throughput_over_time=False, no_drops=False,
                  request_timeout=False, record_core_deallocations=False, initial_credits=False, varyload_by_rtt=False,
-                 zero_initial_cores=False):
+                 zero_initial_cores=False, extend_work_search=False):
 
         # Breakwater configuration
         self.breakwater_enabled = breakwater_enabled
@@ -32,6 +32,7 @@ class SimConfig:
         self.request_timeout = request_timeout
         self.initial_credits = initial_credits
         self.varyload_by_rtt = varyload_by_rtt
+        self.extend_work_search = extend_work_search
 
         self.zero_initial_cores = zero_initial_cores
         self.varyload_over_time = varyload_over_time
@@ -98,6 +99,7 @@ class SimConfig:
         self.BREAKWATER_BETA = 0.02
         self.MAX_CREDITS = 100
         self.SERVER_INITIAL_CREDITS = 50
+        self.EXTEND_WORK_SEARCH_THRESHOLD = 0.25
 
         self.THROUGHPUT_TIMER = 5000
 
@@ -154,7 +156,7 @@ class SimConfig:
 
         # breakwater
         if (not self.breakwater_enabled) and (self.record_breakwater_info or self.record_credit_pool or self.record_drops
-                                              or self.breakwater_debug_info or self.varyload_by_rtt):
+                                              or self.breakwater_debug_info or self.varyload_by_rtt or self.extend_work_search):
             print("A breakwater option is enabled without breakwater enabled")
             return False
         if self.varyload_by_rtt and self.varyload_over_time:

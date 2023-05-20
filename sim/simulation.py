@@ -50,6 +50,7 @@ class Simulation:
 
         allocation_number = 0
         reschedule_required = False
+        next_reset_work_search_time = 0
 
         if self.config.progress_bar:
             print("\nSimulation started")
@@ -90,12 +91,24 @@ class Simulation:
                 self.state.breakwater_server.control_loop(max_delay)
             # restore dropped
             if self.config.breakwater_enabled and self.state.timer.get_time() % self.config.BREAKWATER_GRANULARITY == 0:
+                total_current_drops = 0
+                current_time = self.state.timer.get_time()
                 for client_id in self.state.breakwater_server.available_client_ids:
                     any_successes = self.state.all_clients[client_id].check_successes()
                     any_drops = self.state.all_clients[client_id].restore_dropped_credits()
-                    if any_successes or any_drops or self.state.timer.get_time() % self.config.RTT == 0:
+                    # count drops here, or after lazy dist (where client control loop runs)?
+                    if any_successes or any_drops or current_time % self.config.RTT == 0:
                         # if any response, also redistribute credits
                         self.state.breakwater_server.lazy_distribution(client_id)
+                    total_current_drops += self.state.all_clients[client_id].dropped_credits
+                if current_time > next_reset_work_search_time:
+                    next_reset_work_search_time = 0
+                    self.config.MINIMUM_WORK_SEARCH_TIME = self.state.original_minimum_work_search_time
+                    if ((total_current_drops / self.state.breakwater_server.total_credits)
+                         >= self.config.EXTEND_WORK_SEARCH_THRESHOLD):
+                        self.config.MINIMUM_WORK_SEARCH_TIME = self.config.RTT + 5000
+                        next_reset_work_search_time = current_time + self.config.RTT
+                        self.state.extend_work_search_records.append([current_time, total_current_drops])
 
             if self.config.record_throughput_over_time and self.state.timer.get_time() % self.config.THROUGHPUT_TIMER == 0:
                 current_throughput = (self.state.current_completed_tasks / self.config.THROUGHPUT_TIMER) * 10**9
@@ -589,6 +602,12 @@ class Simulation:
             for record in self.state.breakwater_server.credit_pool_records:
                 credit_pool_file.write(",".join([str(x) for x in record]) + "\n")
             credit_pool_file.close()
+        if self.config.extend_work_search:
+            extend_work_search_file = open("{}extend_work_search.csv".format(new_dir_name), "w")
+            extend_work_search_file.write("Time,Dropped Credits\n")
+            for record in self.state.extend_work_search_records:
+                extend_work_search_file.write(",".join([str(x) for x in record]) + "\n")
+            extend_work_search_file.close()
         # TODO good way to record this for multiple clients?
         if self.config.record_drops:
             drops_record_file = open("{}drops_record.csv".format(new_dir_name), "w")

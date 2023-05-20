@@ -52,6 +52,9 @@ class SimulationState:
         self.alloc_to_task_time = 0 # Make this per-task if need anything other than the average
         self.allocations = 0
 
+        self.original_minimum_work_search_time = config.MINIMUM_WORK_SEARCH_TIME
+        self.extend_work_search_records = []
+
         # Stats only known at complete time
         self.tasks_scheduled = 0
         self.end_time = None
