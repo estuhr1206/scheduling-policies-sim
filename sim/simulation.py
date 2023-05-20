@@ -101,14 +101,15 @@ class Simulation:
                         # if any response, also redistribute credits
                         self.state.breakwater_server.lazy_distribution(client_id)
                     total_current_drops += self.state.all_clients[client_id].dropped_credits
-                if current_time > next_reset_work_search_time:
-                    next_reset_work_search_time = 0
-                    self.config.MINIMUM_WORK_SEARCH_TIME = self.state.original_minimum_work_search_time
-                    if ((total_current_drops / self.state.breakwater_server.total_credits)
-                         >= self.config.EXTEND_WORK_SEARCH_THRESHOLD):
-                        self.config.MINIMUM_WORK_SEARCH_TIME = self.config.RTT + 5000
-                        next_reset_work_search_time = current_time + self.config.RTT
-                        self.state.extend_work_search_records.append([current_time, total_current_drops])
+                if self.config.extend_work_search:
+                    if current_time > next_reset_work_search_time:
+                        next_reset_work_search_time = 0
+                        self.config.MINIMUM_WORK_SEARCH_TIME = self.state.original_minimum_work_search_time
+                        if ((total_current_drops / self.state.breakwater_server.total_credits)
+                             >= self.config.EXTEND_WORK_SEARCH_THRESHOLD):
+                            self.config.MINIMUM_WORK_SEARCH_TIME = self.config.RTT + 5000
+                            next_reset_work_search_time = current_time + self.config.RTT
+                            self.state.extend_work_search_records.append([current_time, total_current_drops])
 
             if self.config.record_throughput_over_time and self.state.timer.get_time() % self.config.THROUGHPUT_TIMER == 0:
                 current_throughput = (self.state.current_completed_tasks / self.config.THROUGHPUT_TIMER) * 10**9
