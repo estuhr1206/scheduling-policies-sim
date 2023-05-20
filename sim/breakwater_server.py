@@ -24,12 +24,23 @@ class BreakwaterServer:
         self.overcommitment_credits = 1
         self.max_delay = 0
 
+        if self.state.config.zero_initial_cores:
+            self.prev_cores = 0
+        else:
+            self.prev_cores = self.state.config.num_threads
+
         self.credit_pool_records = []
-        if self.state.config.initial_credits:
+        if self.state.config.variable_max_credits:
             # TODO 150 is an estimate, should be tested more/calculated better
             self.max_credits = 25 + int(self.state.config.RTT / 5000) * 150 + int(self.target_delay / 100) + 150
         else:
             self.max_credits = MAX_CREDITS
+
+        if self.state.config.variable_min_credits:
+            # TODO didn't see a good pattern in the data yet
+            self.min_credits = self.state.config.MIN_CREDITS
+        else:
+            self.min_credits = self.state.config.MIN_CREDITS
 
         # TODO debugging
         self.debug_records = []
@@ -37,7 +48,15 @@ class BreakwaterServer:
     def control_loop(self, max_delay=0):
         self.max_delay = max_delay
         # total credit pool
+        # This only applies for multi client scenarios
         uppercase_alpha = max(int(self.AGGRESSIVENESS_ALPHA * self.num_clients), 1)
+
+        if self.state.config.ramp_alpha:
+            num_curr_cores = self.state.config.num_threads - len(self.state.parked_threads)
+            allocated_during_RTT = num_curr_cores - self.prev_cores
+            if allocated_during_RTT > 0:
+                # TODO probably a better calculation approach when number of clients is a factor in alpha
+                uppercase_alpha += int(self.state.config.PER_CORE_ALPHA_INCREASE * allocated_during_RTT)
 
         if max_delay < self.target_delay:
             self.total_credits += uppercase_alpha
@@ -46,6 +65,7 @@ class BreakwaterServer:
         else:
             reduction = max(1.0 - self.BETA*((max_delay - self.target_delay)/self.target_delay), 0.5)
             self.total_credits = int(self.total_credits * reduction)
+            self.total_credits = max(self.total_credits, self.min_credits)
 
         # TODO debugging on single client, needs to be adjusted to multiple clients
         # TODO Technically not needed, lazy dist would be called on completions
