@@ -48,12 +48,16 @@ def analyze_sim_run(current_dir, pdf, arr, plus_minus):
     # drops_file = RESULTS_SUBDIR_NAME.format(run_name) + DROPS_FILE_NAME
     # deallocations_file = RESULTS_SUBDIR_NAME.format(run_name) + DEALLOCATIONS_FILE_NAME
     # core_file = RESULTS_SUBDIR_NAME.format(run_name) + CORES_FILE_NAME
-
+    credits_file = CREDITS_FILE_NAME
     task_file = TASK_FILE_NAME
     drops_file = DROPS_FILE_NAME
     deallocations_file = DEALLOCATIONS_FILE_NAME
     core_file = CORES_FILE_NAME
     throughput_file = THROUGHPUT_FILE_NAME
+
+    df = pandas.read_csv(credits_file)
+    Data = df[['Time', 'Total Credits']]
+    credits_data = np.array(Data)
 
     df = pandas.read_csv(throughput_file)
     Data = df[['Time', 'Throughput']]
@@ -104,7 +108,7 @@ def analyze_sim_run(current_dir, pdf, arr, plus_minus):
         PLOTTING
     """
 
-    fig, (plt1, plt2, plt3, plt4, plt5, plt6) = plt.subplots(6, 1, figsize=(20, 26))
+    fig, (plt1, plt2, plt3, plt4, plt5, plt6, plt7) = plt.subplots(6, 1, figsize=(20, 34))
     # TODO this can be something better
     fig.suptitle(current_dir, fontsize=22, y=0.90)
     x_range = [0, 100000]
@@ -129,7 +133,7 @@ def analyze_sim_run(current_dir, pdf, arr, plus_minus):
     plt1.hist(total_arrivals / 1000, num_bins, rasterized=rasterize)
 
     plt1.set_xlabel('Time (us)', fontsize=18)
-    plt1.set_ylabel('# Task Arrivals', fontsize=18)
+    plt1.set_ylabel('Task Arrivals', fontsize=18)
     # plt1.legend(fontsize=18)
 
     """
@@ -147,7 +151,7 @@ def analyze_sim_run(current_dir, pdf, arr, plus_minus):
     plt2.hist(completions / 1000, num_bins, rasterized=rasterize)
 
     plt2.set_xlabel('Time (us)', fontsize=18)
-    plt2.set_ylabel('# Task Completions', fontsize=18)
+    plt2.set_ylabel('Task Completions', fontsize=18)
     # plt2.legend(fontsize=18)
 
     """
@@ -164,8 +168,8 @@ def analyze_sim_run(current_dir, pdf, arr, plus_minus):
 
     plt3.plot(total_system_data[:, 0] / 1000, total_system_data[:, 1], rasterized=rasterize)
 
-    plt3.set_xlabel('Arrival Time (microseconds)', fontsize=18)
-    plt3.set_ylabel('# Tasks in System', fontsize=18)
+    plt3.set_xlabel('Time (microseconds)', fontsize=18)
+    plt3.set_ylabel('Tasks in System', fontsize=18)
 
     """
     PLOT 4
@@ -182,7 +186,7 @@ def analyze_sim_run(current_dir, pdf, arr, plus_minus):
     plt4.scatter(drops_data[:, 0] / 1000, drops_data[:, 1], rasterized=rasterize)
 
     plt4.set_xlabel('Time (microseconds)', fontsize=18)
-    plt4.set_ylabel('# Dropped Credits', fontsize=18)
+    plt4.set_ylabel('Dropped Credits', fontsize=18)
 
     """
     PLOT 5
@@ -197,8 +201,8 @@ def analyze_sim_run(current_dir, pdf, arr, plus_minus):
 
     plt5.plot(core_data[:, 0] / 1000, core_data[:, 1], rasterized=rasterize)
 
-    plt5.set_xlabel('Arrival Time (us)', fontsize=18)
-    plt5.set_ylabel('number of cores', fontsize=18)
+    plt5.set_xlabel('Time (microseconds)', fontsize=18)
+    plt5.set_ylabel('Cores', fontsize=18)
 
     """
     PLOT 6
@@ -217,6 +221,23 @@ def analyze_sim_run(current_dir, pdf, arr, plus_minus):
     plt6.set_xlabel('Time (microseconds)', fontsize=18)
     plt6.set_ylabel('Throughput per second', fontsize=18)
 
+    """
+            PLOT 7
+        """
+    plt7.tick_params(axis='both', which='major', labelsize=18)
+
+    plt7.axis(xmin=x_range[0], xmax=x_range[1])
+    # plt7.axis(ymin=0, ymax=28)
+    plt7.grid(which='major', color='black', linewidth=1.0)
+    plt7.grid(which='minor', color='grey', linewidth=0.2)
+    plt7.minorticks_on()
+    # plt.ylim(ymin=0)
+
+    plt7.plot(credits_data[:, 0] / 1000, credits_data[:, 1], rasterized=rasterize)
+
+    plt7.set_xlabel('Time (microseconds)', fontsize=18)
+    plt7.set_ylabel('Credit Pool', fontsize=18)
+
     # file_name = run_name + 'time_series.png'
     # plt.savefig(file_name)
     # TODO
@@ -229,7 +250,7 @@ def analyze_sim_run(current_dir, pdf, arr, plus_minus):
         print("plotting xrange: {}".format(xcenter_int))
         curr_min = xcenter_int - plus_minus
         curr_max = xcenter_int + plus_minus
-        for curr_plot in [plt1, plt2, plt3, plt4, plt5, plt6]:
+        for curr_plot in [plt1, plt2, plt3, plt4, plt5, plt6, plt7]:
             curr_plot.axis(xmin=curr_min, xmax=curr_max)
         pdf.savefig(fig)
 

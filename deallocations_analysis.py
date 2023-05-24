@@ -108,7 +108,7 @@ def analyze_sim_run(run_name, arr, plus_minus):
         PLOTTING
     """
 
-    fig, (plt1, plt2, plt3, plt4, plt5, plt6, plt7) = plt.subplots(7, 1, figsize=(20,32))
+    fig, (plt1, plt2, plt3, plt4, plt5, plt6, plt7) = plt.subplots(7, 1, figsize=(20,34))
     # TODO this can be something better
     fig.suptitle(run_name, fontsize=22, y=0.90)
     x_range = [0, 100000]
@@ -133,7 +133,7 @@ def analyze_sim_run(run_name, arr, plus_minus):
     plt1.hist(total_arrivals/1000, num_bins, rasterized=rasterize)        
 
     plt1.set_xlabel('Time (us)', fontsize=18)
-    plt1.set_ylabel('# Task Arrivals', fontsize=18)
+    plt1.set_ylabel('Task Arrivals', fontsize=18)
     # plt1.legend(fontsize=18)
 
 
@@ -152,7 +152,7 @@ def analyze_sim_run(run_name, arr, plus_minus):
     plt2.hist(completions/1000, num_bins, rasterized=rasterize)
 
     plt2.set_xlabel('Time (us)', fontsize=18)
-    plt2.set_ylabel('# Task Completions', fontsize=18)
+    plt2.set_ylabel('Task Completions', fontsize=18)
     #plt2.legend(fontsize=18)
 
 
@@ -171,8 +171,8 @@ def analyze_sim_run(run_name, arr, plus_minus):
             
     plt3.plot(total_system_data[:,0]/1000, total_system_data[:,1], rasterized=rasterize)
 
-    plt3.set_xlabel('Arrival Time (microseconds)', fontsize=18)
-    plt3.set_ylabel('# Tasks in System', fontsize=18)
+    plt3.set_xlabel('Time (microseconds)', fontsize=18)
+    plt3.set_ylabel('Tasks in System', fontsize=18)
 
     """
     PLOT 4
@@ -190,7 +190,7 @@ def analyze_sim_run(run_name, arr, plus_minus):
     plt4.scatter(drops_data[:,0]/1000, drops_data[:,1], rasterized=rasterize)
 
     plt4.set_xlabel('Time (microseconds)', fontsize=18)
-    plt4.set_ylabel('# Dropped Credits', fontsize=18)
+    plt4.set_ylabel('Dropped Credits', fontsize=18)
 
 
     """
@@ -207,8 +207,8 @@ def analyze_sim_run(run_name, arr, plus_minus):
             
     plt5.plot(core_data[:,0]/1000, core_data[:,1], rasterized=rasterize)
 
-    plt5.set_xlabel('Arrival Time (us)', fontsize=18)
-    plt5.set_ylabel('number of cores', fontsize=18)
+    plt5.set_xlabel('Time (microseconds)', fontsize=18)
+    plt5.set_ylabel('Cores', fontsize=18)
 
 
     """
