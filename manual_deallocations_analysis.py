@@ -108,7 +108,7 @@ def analyze_sim_run(current_dir, pdf, arr, plus_minus):
         PLOTTING
     """
 
-    fig, (plt1, plt2, plt3, plt4, plt5, plt6, plt7) = plt.subplots(6, 1, figsize=(20, 34))
+    fig, (plt1, plt2, plt3, plt4, plt5, plt6, plt7) = plt.subplots(7, 1, figsize=(20, 34))
     # TODO this can be something better
     fig.suptitle(current_dir, fontsize=22, y=0.90)
     x_range = [0, 100000]
