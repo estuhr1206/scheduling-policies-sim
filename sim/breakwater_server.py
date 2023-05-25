@@ -24,6 +24,8 @@ class BreakwaterServer:
         self.overcommitment_credits = 1
         self.max_delay = 0
 
+        self.ramp_alpha_records = []
+
         if self.state.config.zero_initial_cores:
             self.prev_cores = 0
         else:
@@ -54,12 +56,15 @@ class BreakwaterServer:
         if self.state.config.ramp_alpha:
             num_curr_cores = self.state.config.num_threads - len(self.state.parked_threads)
             allocated_during_RTT = num_curr_cores - self.prev_cores
+            self.prev_cores = num_curr_cores
             # calculated based on 5 us baseline, 8 credits per core, increasing by 5 every additional 5 us RTT
             # TODO would also vary based on target delay, but needs more testing
             per_core_increase = self.state.config.PER_CORE_ALPHA_INCREASE + ((1-int(self.state.config.RTT / 5000)) * 5)
             if allocated_during_RTT > 0:
                 # TODO probably a better calculation approach when number of clients is a factor in alpha
                 uppercase_alpha += int(per_core_increase * allocated_during_RTT)
+                self.ramp_alpha_records.append([self.state.timer.get_time(), int(per_core_increase*allocated_during_RTT),
+                                                self.total_credits, allocated_during_RTT])
 
         if max_delay < self.target_delay:
             self.total_credits += uppercase_alpha

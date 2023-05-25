@@ -609,6 +609,13 @@ class Simulation:
             for record in self.state.extend_work_search_records:
                 extend_work_search_file.write(",".join([str(x) for x in record]) + "\n")
             extend_work_search_file.close()
+
+        if self.config.ramp_alpha:
+            ramp_alpha_file = open("{}ramp_alpha.csv".format(new_dir_name), "w")
+            ramp_alpha_file.write("Time,Alpha,Total Credits,#Allocated Cores\n")
+            for record in self.state.breakwater_server.ramp_alpha_records:
+                ramp_alpha_file.write(",".join([str(x) for x in record]) + "\n")
+            ramp_alpha_file.close()
         # TODO good way to record this for multiple clients?
         if self.config.record_drops:
             drops_record_file = open("{}drops_record.csv".format(new_dir_name), "w")
