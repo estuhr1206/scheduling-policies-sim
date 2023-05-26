@@ -59,10 +59,13 @@ class BreakwaterServer:
             self.prev_cores = num_curr_cores
             # calculated based on 5 us baseline, 8 credits per core, increasing by 5 every additional 5 us RTT
             # TODO would also vary based on target delay, but needs more testing
-            per_core_increase = self.state.config.PER_CORE_ALPHA_INCREASE + ((1-int(self.state.config.RTT / 5000)) * 5)
+            per_core_increase = self.state.config.PER_CORE_ALPHA_INCREASE + ((int(self.state.config.RTT / 5000)-1) * 5)
             if allocated_during_RTT > 0:
                 # TODO probably a better calculation approach when number of clients is a factor in alpha
                 uppercase_alpha += int(per_core_increase * allocated_during_RTT)
+                if int(per_core_increase * allocated_during_RTT) < 0:
+                    raise ValueError("error, alpha ramp was below 0, value was: {}".format(
+                                                    int(per_core_increase * allocated_during_RTT)))
                 self.ramp_alpha_records.append([self.state.timer.get_time(), int(per_core_increase*allocated_during_RTT),
                                                 self.total_credits, allocated_during_RTT])
 
