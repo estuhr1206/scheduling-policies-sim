@@ -31,6 +31,8 @@ class BreakwaterClient:
         self.drops_record = []
         self.tasks_spent_control_loop = 0
 
+        self.timeout = int(10 * (self.state.config.RTT + self.state.config.AVERAGE_SERVICE_TIME))
+
         self.dropped_credits = 0
 
         self.id = identifier
@@ -117,7 +119,7 @@ class BreakwaterClient:
         if self.state.config.request_timeout:
             while len(self.queue) > 0:
                 current_task = self.queue[0]
-                if current_task.arrival_time <= self.state.timer.get_time() - self.state.config.CLIENT_TIMEOUT:
+                if current_task.arrival_time <= self.state.timer.get_time() - self.timeout:
                     self.queue.popleft()
                     # self.current_demand -= 1
                     self.timed_out_tasks += 1
