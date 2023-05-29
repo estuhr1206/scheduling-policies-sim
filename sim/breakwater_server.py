@@ -57,9 +57,9 @@ class BreakwaterServer:
             num_curr_cores = self.state.config.num_threads - len(self.state.parked_threads)
             allocated_during_RTT = num_curr_cores - self.prev_cores
             self.prev_cores = num_curr_cores
-            # calculated based on 5 us baseline, 8 credits per core, increasing by 5 every additional 5 us RTT
-            # TODO would also vary based on target delay, but needs more testing
-            per_core_increase = self.state.config.PER_CORE_ALPHA_INCREASE + ((int(self.state.config.RTT / 5000)-1) * 5)
+            # TODO more testing
+            per_core_increase = self.state.config.PER_CORE_ALPHA_INCREASE * (
+                                (self.state.config.RTT / 1000) + (self.state.config.BREAKWATER_TARGET_DELAY / 1000))
             if allocated_during_RTT > 0:
                 # TODO probably a better calculation approach when number of clients is a factor in alpha
                 uppercase_alpha += int(per_core_increase * allocated_during_RTT)
