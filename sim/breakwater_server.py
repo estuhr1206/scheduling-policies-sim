@@ -30,6 +30,7 @@ class BreakwaterServer:
             self.prev_cores = 0
         else:
             self.prev_cores = self.state.config.num_threads
+        self.prev_total_queue = 0
 
         self.credit_pool_records = []
         if self.state.config.variable_max_credits:
@@ -55,12 +56,14 @@ class BreakwaterServer:
 
         if self.state.config.ramp_alpha:
             num_curr_cores = self.state.config.num_threads - len(self.state.parked_threads)
+            total_queue = self.state.total_queue_occupancy()
+
             allocated_during_RTT = num_curr_cores - self.prev_cores
             self.prev_cores = num_curr_cores
             # TODO more testing
             per_core_increase = self.state.config.PER_CORE_ALPHA_INCREASE * (
                                 (self.state.config.RTT / 1000) + (self.state.config.BREAKWATER_TARGET_DELAY / 1000))
-            if allocated_during_RTT > 0:
+            if allocated_during_RTT > 0 and total_queue >= 3 * self.prev_total_queue:
                 # TODO probably a better calculation approach when number of clients is a factor in alpha
                 uppercase_alpha += int(per_core_increase * allocated_during_RTT)
                 if int(per_core_increase * allocated_during_RTT) < 0:
@@ -68,6 +71,7 @@ class BreakwaterServer:
                                                     int(per_core_increase * allocated_during_RTT)))
                 self.ramp_alpha_records.append([self.state.timer.get_time(), int(per_core_increase*allocated_during_RTT),
                                                 self.total_credits, allocated_during_RTT])
+            self.prev_total_queue = total_queue
 
         if max_delay < self.target_delay:
             self.total_credits += uppercase_alpha

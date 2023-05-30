@@ -31,7 +31,7 @@ class BreakwaterClient:
         self.drops_record = []
         self.tasks_spent_control_loop = 0
 
-        self.timeout = int(10 * (self.state.config.RTT + self.state.config.AVERAGE_SERVICE_TIME))
+        self.timeout = 2 * int(10 * (self.state.config.RTT + self.state.config.AVERAGE_SERVICE_TIME))
 
         self.dropped_credits = 0
 
