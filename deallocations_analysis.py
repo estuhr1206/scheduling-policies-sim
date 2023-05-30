@@ -63,6 +63,10 @@ def analyze_sim_run(run_name, arr, plus_minus):
     Data = df[['Time', 'Throughput']]
     throughput_data = np.array(Data)
 
+    df = pandas.read_csv(throughput_file)
+    Data = df[['Time', 'Goodput']]
+    goodput_data = np.array(Data)
+
     df = pandas.read_csv(core_file)
     Data = df[['Time', 'Queues']]
     core_data = np.array(Data)
@@ -108,7 +112,7 @@ def analyze_sim_run(run_name, arr, plus_minus):
         PLOTTING
     """
 
-    fig, (plt1, plt2, plt3, plt4, plt5, plt6, plt7) = plt.subplots(7, 1, figsize=(20,34))
+    fig, (plt1, plt2, plt3, plt4, plt5, plt6, plt7, plt8) = plt.subplots(8, 1, figsize=(20,40))
     # TODO this can be something better
     fig.suptitle(run_name, fontsize=22, y=0.90)
     x_range = [0, 100000]
@@ -209,42 +213,59 @@ def analyze_sim_run(run_name, arr, plus_minus):
 
     plt5.set_xlabel('Time (microseconds)', fontsize=18)
     plt5.set_ylabel('Cores', fontsize=18)
-
-
     """
-    PLOT 6
+        PLOT 6
     """
     plt6.tick_params(axis='both', which='major', labelsize=18)
 
     plt6.axis(xmin=x_range[0], xmax=x_range[1])
-    #plt6.axis(ymin=0, ymax=28)
+    # plt6.axis(ymin=0, ymax=28)
     plt6.grid(which='major', color='black', linewidth=1.0)
     plt6.grid(which='minor', color='grey', linewidth=0.2)
     plt6.minorticks_on()
     # plt.ylim(ymin=0)
 
-            
-    plt6.plot(throughput_data[:,0]/1000, throughput_data[:,1], rasterized=rasterize)
+    plt6.plot(credits_data[:, 0] / 1000, credits_data[:, 1], rasterized=rasterize)
 
     plt6.set_xlabel('Time (microseconds)', fontsize=18)
-    plt6.set_ylabel('Throughput per second', fontsize=18)
+    plt6.set_ylabel('Credit Pool', fontsize=18)
 
     """
-        PLOT 7
+    PLOT 7
     """
     plt7.tick_params(axis='both', which='major', labelsize=18)
 
     plt7.axis(xmin=x_range[0], xmax=x_range[1])
-    # plt7.axis(ymin=0, ymax=28)
+    #plt7.axis(ymin=0, ymax=28)
     plt7.grid(which='major', color='black', linewidth=1.0)
     plt7.grid(which='minor', color='grey', linewidth=0.2)
     plt7.minorticks_on()
     # plt.ylim(ymin=0)
 
-    plt7.plot(credits_data[:, 0] / 1000, credits_data[:, 1], rasterized=rasterize)
+            
+    plt7.plot(throughput_data[:,0]/1000, throughput_data[:,1], rasterized=rasterize)
 
     plt7.set_xlabel('Time (microseconds)', fontsize=18)
-    plt7.set_ylabel('Credit Pool', fontsize=18)
+    plt7.set_ylabel('Throughput per second', fontsize=18)
+
+    """
+    PLOT 8
+    """
+    plt8.tick_params(axis='both', which='major', labelsize=18)
+
+    plt8.axis(xmin=x_range[0], xmax=x_range[1])
+    # plt8.axis(ymin=0, ymax=28)
+    plt8.grid(which='major', color='black', linewidth=1.0)
+    plt8.grid(which='minor', color='grey', linewidth=0.2)
+    plt8.minorticks_on()
+    # plt.ylim(ymin=0)
+
+    plt8.plot(goodput_data[:, 0] / 1000, goodput_data[:, 1], rasterized=rasterize)
+
+    plt8.set_xlabel('Time (microseconds)', fontsize=18)
+    plt8.set_ylabel('Goodput per second', fontsize=18)
+
+
 
 
 
@@ -260,7 +281,7 @@ def analyze_sim_run(run_name, arr, plus_minus):
         print("plotting xrange: {}".format(xcenter_int))
         curr_min = xcenter_int - plus_minus
         curr_max = xcenter_int + plus_minus
-        for curr_plot in [plt1, plt2, plt3, plt4, plt5, plt6, plt7]:
+        for curr_plot in [plt1, plt2, plt3, plt4, plt5, plt6, plt7, plt8]:
             curr_plot.axis(xmin=curr_min, xmax=curr_max)
         pdf.savefig(fig)
     pdf.close()
