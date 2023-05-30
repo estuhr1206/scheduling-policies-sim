@@ -63,8 +63,14 @@ class BreakwaterServer:
             # TODO more testing
             per_core_increase = self.state.config.PER_CORE_ALPHA_INCREASE * (
                                 (self.state.config.RTT / 1000) + (self.state.config.BREAKWATER_TARGET_DELAY / 1000))
-            #if allocated_during_RTT > 0 and total_queue >= 3 * self.prev_total_queue:
-            if allocated_during_RTT > 0:
+            # trying drops method, similar to extend ws, as a sign that we are seeing a genuine increase in load,
+            # and not just instability
+            total_current_drops = 0
+            for client_id in self.available_client_ids:
+                total_current_drops += self.state.all_clients[client_id].dropped_credits
+            if (total_current_drops / self.total_credits) >= self.state.config.EXTEND_WORK_SEARCH_THRESHOLD:
+            # if allocated_during_RTT > 0 and total_queue >= 3 * self.prev_total_queue:
+            # if allocated_during_RTT > 0:
                 # TODO probably a better calculation approach when number of clients is a factor in alpha
                 uppercase_alpha += int(per_core_increase * allocated_during_RTT)
                 if int(per_core_increase * allocated_during_RTT) < 0:

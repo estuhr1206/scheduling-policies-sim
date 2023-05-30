@@ -49,9 +49,9 @@ def analyze_sim_run(run_name, pdf):
     Data = df[['Time', 'Throughput']]
     throughput_data = np.array(Data)
 
-    df = pandas.read_csv(throughput_file)
-    Data = df[['Time', 'Goodput']]
-    goodput_data = np.array(Data)
+    # df = pandas.read_csv(throughput_file)
+    # Data = df[['Time', 'Goodput']]
+    # goodput_data = np.array(Data)
 
     df = pandas.read_csv(task_file)
     Data = df[['Arrival Time', 'Time in System']]
@@ -71,7 +71,7 @@ def analyze_sim_run(run_name, pdf):
         PLOTTING
     """
     
-    fig, (plt1, plt2, plt3, plt4, plt5) = plt.subplots(5, 1, figsize=(20,25))
+    fig, (plt1, plt2, plt3, plt4) = plt.subplots(4, 1, figsize=(20,20))
     fig.suptitle(run_name, fontsize=22, y=0.90)
     x_range = [0, 100000]
     """
@@ -153,19 +153,19 @@ def analyze_sim_run(run_name, pdf):
     """
         PLOT 5
         """
-    plt5.tick_params(axis='both', which='major', labelsize=18)
-
-    plt5.axis(xmin=x_range[0], xmax=x_range[1])
-    # plt5.axis(ymin=0, ymax=28)
-    plt5.grid(which='major', color='black', linewidth=1.0)
-    plt5.grid(which='minor', color='grey', linewidth=0.2)
-    plt5.minorticks_on()
-    # plt.ylim(ymin=0)
-
-    plt5.plot(goodput_data[:, 0] / 1000, goodput_data[:, 1], rasterized=rasterize)
-
-    plt5.set_xlabel('Time (microseconds)', fontsize=18)
-    plt5.set_ylabel('Goodput per second', fontsize=18)
+    # plt5.tick_params(axis='both', which='major', labelsize=18)
+    #
+    # plt5.axis(xmin=x_range[0], xmax=x_range[1])
+    # # plt5.axis(ymin=0, ymax=28)
+    # plt5.grid(which='major', color='black', linewidth=1.0)
+    # plt5.grid(which='minor', color='grey', linewidth=0.2)
+    # plt5.minorticks_on()
+    # # plt.ylim(ymin=0)
+    #
+    # plt5.plot(goodput_data[:, 0] / 1000, goodput_data[:, 1], rasterized=rasterize)
+    #
+    # plt5.set_xlabel('Time (microseconds)', fontsize=18)
+    # plt5.set_ylabel('Goodput per second', fontsize=18)
 
     # file_name = run_name + 'time_series.png'
     # plt.savefig(file_name)
