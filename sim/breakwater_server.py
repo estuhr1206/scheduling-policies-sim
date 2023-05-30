@@ -68,7 +68,8 @@ class BreakwaterServer:
             total_current_drops = 0
             for client_id in self.available_client_ids:
                 total_current_drops += self.state.all_clients[client_id].dropped_credits
-            if (total_current_drops / self.total_credits) >= self.state.config.EXTEND_WORK_SEARCH_THRESHOLD:
+            if allocated_during_RTT > 0 and \
+                    (total_current_drops / self.total_credits) >= self.state.config.EXTEND_WORK_SEARCH_THRESHOLD:
             # if allocated_during_RTT > 0 and total_queue >= 3 * self.prev_total_queue:
             # if allocated_during_RTT > 0:
                 # TODO probably a better calculation approach when number of clients is a factor in alpha
