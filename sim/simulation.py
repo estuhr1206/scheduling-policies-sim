@@ -112,9 +112,13 @@ class Simulation:
                             self.state.extend_work_search_records.append([current_time, total_current_drops])
 
             if self.config.record_throughput_over_time and self.state.timer.get_time() % self.config.THROUGHPUT_TIMER == 0:
+                # adding in goodput, tasks that met SLO
+
                 current_throughput = (self.state.current_completed_tasks / self.config.THROUGHPUT_TIMER) * 10**9
-                self.state.throughput_records.append([self.state.timer.get_time(), current_throughput])
+                current_goodput = (self.state.current_slo_completed_tasks / self.config.THROUGHPUT_TIMER) * 10**9
+                self.state.throughput_records.append([self.state.timer.get_time(), current_throughput, current_goodput])
                 self.state.current_completed_tasks = 0
+                self.state.current_slo_completed_tasks = 0
 
             # Reallocations
             # Continuously check for reallocations
@@ -583,7 +587,7 @@ class Simulation:
         
         if self.config.record_throughput_over_time:
             throughput_over_time_file = open("{}throughput_over_time.csv".format(new_dir_name), "w")
-            throughput_over_time_file.write("Time,Throughput\n")
+            throughput_over_time_file.write("Time,Throughput,Goodput\n")
             for record in self.state.throughput_records:
                 throughput_over_time_file.write(",".join([str(x) for x in record]) + "\n")
             throughput_over_time_file.close()

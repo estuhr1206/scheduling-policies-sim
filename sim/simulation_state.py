@@ -37,6 +37,7 @@ class SimulationState:
 
         self.throughput_records = []
         self.current_completed_tasks = 0
+        self.current_slo_completed_tasks = 0
         self.deallocations_records = []
 
         # Global stats

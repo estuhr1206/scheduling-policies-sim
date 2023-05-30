@@ -63,7 +63,8 @@ class BreakwaterServer:
             # TODO more testing
             per_core_increase = self.state.config.PER_CORE_ALPHA_INCREASE * (
                                 (self.state.config.RTT / 1000) + (self.state.config.BREAKWATER_TARGET_DELAY / 1000))
-            if allocated_during_RTT > 0 and total_queue >= 3 * self.prev_total_queue:
+            #if allocated_during_RTT > 0 and total_queue >= 3 * self.prev_total_queue:
+            if allocated_during_RTT > 0:
                 # TODO probably a better calculation approach when number of clients is a factor in alpha
                 uppercase_alpha += int(per_core_increase * allocated_during_RTT)
                 if int(per_core_increase * allocated_during_RTT) < 0:
@@ -72,7 +73,8 @@ class BreakwaterServer:
                 self.ramp_alpha_records.append([self.state.timer.get_time(), int(per_core_increase*allocated_during_RTT),
                                                 self.total_credits, allocated_during_RTT])
             self.prev_total_queue = total_queue
-
+        # increase won't trigger sometimes. Do we want it to always trigger if the ramp conditions are met?
+        # but then again, we're also seeing ramp trigger when it shouldn't under stable low load.
         if max_delay < self.target_delay:
             self.total_credits += uppercase_alpha
             if self.total_credits > self.max_credits:

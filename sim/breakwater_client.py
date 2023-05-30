@@ -121,7 +121,7 @@ class BreakwaterClient:
                 current_task = self.queue[0]
                 if current_task.arrival_time <= self.state.timer.get_time() - self.timeout:
                     self.queue.popleft()
-                    # self.current_demand -= 1
+                    self.current_demand -= 1
                     self.timed_out_tasks += 1
                 else:
                     break
