@@ -43,6 +43,9 @@ class BreakwaterClient:
         self.dropped_credits_map = np.zeros((self.total_intervals + 1))
         self.success_credits_map = np.zeros((self.total_intervals + 1))
 
+        self.sent_last_us = 0
+        self.pacing_timestamp = 0
+
     def enqueue_task(self, task):
         self.queue.append(task)
         self.current_demand += 1
@@ -128,6 +131,15 @@ class BreakwaterClient:
 
         self.c_unused = self.window - (self.c_in_use + self.dropped_credits)
         while len(self.queue) > 0 and self.c_unused > 0:
+            if self.state.config.client_pacing and self.state.breakwater_server.total_credits <= 50:
+                if self.state.timer.get_time() > self.pacing_timestamp + 1000:
+                    self.sent_last_us = 0
+                    self.pacing_timestamp = self.state.timer.get_time()
+                # TODO what is a reasonable limit per us. 32 at high load, however low credits and low core
+                # situations probably needs less.
+                if self.sent_last_us >= self.state.config.PACING_CREDITS_PER_US:
+                    break
+                self.sent_last_us += 1
             if from_server:
                 self.tasks_spent_control_loop += 1
             self.spend_credits()

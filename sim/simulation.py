@@ -113,6 +113,11 @@ class Simulation:
                         # if any response, also redistribute credits
                         self.state.breakwater_server.lazy_distribution(client_id)
                     total_current_drops += self.state.all_clients[client_id].dropped_credits
+                    if self.config.client_pacing:
+                        # TODO just making sure client always runs if it's being paced
+                        # be careful, under high load client could get called 30 times a microsecond.
+                        # should probably pace using the time
+                        self.state.all_clients[client_id].client_control_loop()
                 if self.config.extend_work_search:
                     if current_time > next_reset_work_search_time:
                         next_reset_work_search_time = 0

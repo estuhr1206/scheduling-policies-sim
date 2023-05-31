@@ -21,7 +21,7 @@ class SimConfig:
                  breakwater_debug_info=False, varyload_over_time=False, record_throughput_over_time=False, no_drops=False,
                  request_timeout=False, record_core_deallocations=False, initial_credits=False, varyload_by_rtt=False,
                  zero_initial_cores=False, extend_work_search=False, variable_max_credits=False, variable_min_credits=False,
-                 ramp_alpha=False):
+                 ramp_alpha=False, client_pacing=False):
 
         # Breakwater configuration
         self.breakwater_enabled = breakwater_enabled
@@ -37,6 +37,7 @@ class SimConfig:
         self.varyload_by_rtt = varyload_by_rtt
         self.extend_work_search = extend_work_search
         self.ramp_alpha = ramp_alpha
+        self.client_pacing = client_pacing
 
         self.zero_initial_cores = zero_initial_cores
         self.varyload_over_time = varyload_over_time
