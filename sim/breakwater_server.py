@@ -54,26 +54,29 @@ class BreakwaterServer:
         # This only applies for multi client scenarios
         uppercase_alpha = max(int(self.AGGRESSIVENESS_ALPHA * self.num_clients), 1)
 
-        if self.state.config.ramp_alpha:
+        if False and self.state.config.ramp_alpha:
             num_curr_cores = self.state.config.num_threads - len(self.state.parked_threads)
             total_queue = self.state.total_queue_occupancy()
+            num_queues = len(self.state.available_queues)
+            num_curr_cores = num_queues
 
             allocated_during_RTT = num_curr_cores - self.prev_cores
             self.prev_cores = num_curr_cores
-            # TODO more testing
-            per_core_increase = self.state.config.PER_CORE_ALPHA_INCREASE * (
-                                (self.state.config.RTT / 1000) + (self.state.config.BREAKWATER_TARGET_DELAY / 1000))
+            per_core_increase = self.state.config.PER_CORE_ALPHA_INCREASE * (self.total_credits / num_curr_cores)
+            # per_core_increase = self.state.config.PER_CORE_ALPHA_INCREASE * (
+            #                     (self.state.config.RTT / 1000) + (self.state.config.BREAKWATER_TARGET_DELAY / 1000))
+
             # trying drops method, similar to extend ws, as a sign that we are seeing a genuine increase in load,
             # and not just instability
             total_current_drops = 0
             for client_id in self.available_client_ids:
                 total_current_drops += self.state.all_clients[client_id].dropped_credits
-            if allocated_during_RTT > 0 and \
-                    (total_current_drops / self.total_credits) >= self.state.config.EXTEND_WORK_SEARCH_THRESHOLD:
+            # if allocated_during_RTT > 0 and \
+            #         (total_current_drops / self.total_credits) >= self.state.config.EXTEND_WORK_SEARCH_THRESHOLD:
             # if allocated_during_RTT > 0 and total_queue >= 3 * self.prev_total_queue:
-            # if allocated_during_RTT > 0:
+            if allocated_during_RTT > 0:
                 # TODO probably a better calculation approach when number of clients is a factor in alpha
-                uppercase_alpha += int(per_core_increase * allocated_during_RTT)
+                self.total_credits += int(per_core_increase * allocated_during_RTT)
                 if int(per_core_increase * allocated_during_RTT) < 0:
                     raise ValueError("error, alpha ramp was below 0, value was: {}".format(
                                                     int(per_core_increase * allocated_during_RTT)))

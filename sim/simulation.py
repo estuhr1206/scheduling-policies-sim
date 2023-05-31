@@ -85,6 +85,15 @@ class Simulation:
                 task_number += 1
 
             # breakwater
+            # time jumps shouldn't skip this, a core "finishes" an allocation task
+            if self.config.breakwater_enabled and self.config.ramp_alpha:
+                curr_num_queues = len(self.state.available_queues)
+                if curr_num_queues > self.state.prev_queues:
+                    increase = self.state.config.PER_CORE_ALPHA_INCREASE * (self.state.breakwater_server.total_credits
+                                                                            / curr_num_queues)
+                    self.state.breakwater_server.total_credits += increase
+                self.state.prev_queues = curr_num_queues
+
             # server control loop
             if self.config.breakwater_enabled and self.state.timer.get_time() % self.config.RTT == 0:
                 max_delay = self.state.max_queue_delay()[0]

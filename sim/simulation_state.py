@@ -39,6 +39,7 @@ class SimulationState:
         self.current_completed_tasks = 0
         self.current_slo_completed_tasks = 0
         self.deallocations_records = []
+        self.prev_queues = 0
 
         # Global stats
         self.overall_steal_count = 0
@@ -380,7 +381,9 @@ class SimulationState:
         for i in range(len(set(config.mapping))):
             self.queues.append(Queue(i, config, self))
         self.available_queues = list(set(config.mapping))
-
+        # TODO this works only if we are considering 1 queue to 1 thread. adjust ramp alpha to use threads
+        # if this is not the case.
+        self.prev_queues = len(self.available_queues)
         if config.join_bounded_shortest_queue:
             self.main_queue = Queue(-1, config, self)
 
