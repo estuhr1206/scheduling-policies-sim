@@ -92,6 +92,8 @@ class Simulation:
                     increase = self.state.config.PER_CORE_ALPHA_INCREASE * (self.state.breakwater_server.total_credits
                                                                             / curr_num_queues)
                     self.state.breakwater_server.total_credits += increase
+                    self.state.breakwater_server.total_credits = min(self.state.breakwater_server.max_credits,
+                                                                     self.state.breakwater_server.total_credits)
                     self.state.breakwater_server.ramp_alpha_records.append(
                         [self.state.timer.get_time(), increase,
                          self.state.breakwater_server.total_credits, curr_num_queues - self.state.prev_queues])
