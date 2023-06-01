@@ -81,7 +81,7 @@ class BreakwaterServer:
             self.credit_pool_records.append([self.state.timer.get_time(), self.total_credits, self.credits_issued,
                                              self.overcommitment_credits])
 
-        if self.ramp_in_server_loop and self.state.config.ramp_alpha:
+        if self.state.config.ramp_in_server_loop and self.state.config.ramp_alpha:
             # should this get reset? Or should it always get used up?
             # probably shouldn't always get used up? At that point just force it
             self.next_ramp_alpha = 0

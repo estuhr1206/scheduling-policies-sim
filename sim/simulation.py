@@ -86,7 +86,7 @@ class Simulation:
 
             # breakwater
             # time jumps shouldn't skip this, a core "finishes" an allocation task
-            if not self.ramp_in_server_loop and self.config.breakwater_enabled and self.config.ramp_alpha:
+            if not self.config.ramp_in_server_loop and self.config.breakwater_enabled and self.config.ramp_alpha:
                 curr_time = self.state.timer.get_time()
                 if self.config.delay_ramp and curr_time % 1000 == 0:
                     self.state.breakwater_server.total_credits += self.state.ramp_delay_map[int(curr_time/1000)]
