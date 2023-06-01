@@ -117,7 +117,7 @@ def main():
         print("Simulation {} analysis complete".format(sim_name))
     analyze_sim_run(breakwater_data_total, new_filename)
     if "-outfile" in sys.argv:
-        pandas.DataFrame(breakwater_data_total, columns=['Dropped Tasks', 'Timed Out Tasks'], dtype=int).to_csv(new_filename)
+        pandas.DataFrame(breakwater_data_total, columns=['Dropped Tasks', 'Timed Out Tasks'], dtype=int).to_csv(new_filename + '.csv')
 
 
 if __name__ == "__main__":
