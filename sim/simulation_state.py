@@ -4,6 +4,7 @@
 import math
 import datetime
 import random
+import numpy as np
 
 from timer import Timer
 from work_search_state import WorkSearchState
@@ -40,6 +41,8 @@ class SimulationState:
         self.current_slo_completed_tasks = 0
         self.deallocations_records = []
         self.prev_queues = 0
+        if config.delay_ramp and not config.ramp_in_server_loop:
+            self.ramp_delay_map = np.zeros((int(self.state.config.sim_duration / 1000) + 1))
 
         # Global stats
         self.overall_steal_count = 0

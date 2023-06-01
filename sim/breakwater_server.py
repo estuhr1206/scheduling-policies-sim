@@ -48,13 +48,43 @@ class BreakwaterServer:
         # TODO debugging
         self.debug_records = []
 
+        self.next_ramp_alpha = 0
+
     def control_loop(self, max_delay=0):
         self.max_delay = max_delay
         # total credit pool
         # This only applies for multi client scenarios
         uppercase_alpha = max(int(self.AGGRESSIVENESS_ALPHA * self.num_clients), 1)
 
-        if False and self.state.config.ramp_alpha:
+        if self.next_ramp_alpha > 0:
+            uppercase_alpha += self.next_ramp_alpha
+            # this forces it to occur or not
+            # max_delay = 0
+            self.next_ramp_alpha = 0
+
+        if max_delay < self.target_delay:
+            self.total_credits += uppercase_alpha
+            if self.total_credits > self.max_credits:
+                self.total_credits = self.max_credits
+        else:
+            reduction = max(1.0 - self.BETA*((max_delay - self.target_delay)/self.target_delay), 0.5)
+            self.total_credits = int(self.total_credits * reduction)
+            self.total_credits = max(self.total_credits, self.min_credits)
+
+        # TODO debugging on single client, needs to be adjusted to multiple clients
+        # TODO Technically not needed, lazy dist would be called on completions
+        # also a bit dangerous, isn't delayed by an RTT? Can remove later, need to test incrementally
+        # if self.num_clients > 0:
+        #     self.lazy_distribution(0)
+
+        if self.state.config.record_credit_pool:
+            self.credit_pool_records.append([self.state.timer.get_time(), self.total_credits, self.credits_issued,
+                                             self.overcommitment_credits])
+
+        if self.ramp_in_server_loop and self.state.config.ramp_alpha:
+            # should this get reset? Or should it always get used up?
+            # probably shouldn't always get used up? At that point just force it
+            self.next_ramp_alpha = 0
             num_curr_cores = self.state.config.num_threads - len(self.state.parked_threads)
             total_queue = self.state.total_queue_occupancy()
             num_queues = len(self.state.available_queues)
@@ -76,7 +106,7 @@ class BreakwaterServer:
             # if allocated_during_RTT > 0 and total_queue >= 3 * self.prev_total_queue:
             if allocated_during_RTT > 0:
                 # TODO probably a better calculation approach when number of clients is a factor in alpha
-                self.total_credits += int(per_core_increase * allocated_during_RTT)
+                self.next_ramp_alpha = int(per_core_increase * allocated_during_RTT)
                 if int(per_core_increase * allocated_during_RTT) < 0:
                     raise ValueError("error, alpha ramp was below 0, value was: {}".format(
                                                     int(per_core_increase * allocated_during_RTT)))
@@ -85,24 +115,7 @@ class BreakwaterServer:
             self.prev_total_queue = total_queue
         # increase won't trigger sometimes. Do we want it to always trigger if the ramp conditions are met?
         # but then again, we're also seeing ramp trigger when it shouldn't under stable low load.
-        if max_delay < self.target_delay:
-            self.total_credits += uppercase_alpha
-            if self.total_credits > self.max_credits:
-                self.total_credits = self.max_credits
-        else:
-            reduction = max(1.0 - self.BETA*((max_delay - self.target_delay)/self.target_delay), 0.5)
-            self.total_credits = int(self.total_credits * reduction)
-            self.total_credits = max(self.total_credits, self.min_credits)
 
-        # TODO debugging on single client, needs to be adjusted to multiple clients
-        # TODO Technically not needed, lazy dist would be called on completions
-        # also a bit dangerous, isn't delayed by an RTT? Can remove later, need to test incrementally
-        # if self.num_clients > 0:
-        #     self.lazy_distribution(0)
-
-        if self.state.config.record_credit_pool:
-            self.credit_pool_records.append([self.state.timer.get_time(), self.total_credits, self.credits_issued,
-                                             self.overcommitment_credits])
 
     def lazy_distribution(self, client_id):
         """

@@ -86,16 +86,25 @@ class Simulation:
 
             # breakwater
             # time jumps shouldn't skip this, a core "finishes" an allocation task
-            if self.config.breakwater_enabled and self.config.ramp_alpha:
-                curr_num_queues = len(self.state.available_queues)
-                if curr_num_queues > self.state.prev_queues:
-                    increase = self.state.config.PER_CORE_ALPHA_INCREASE * (self.state.breakwater_server.total_credits
-                                                                            / curr_num_queues)
-                    self.state.breakwater_server.total_credits += increase
+            if not self.ramp_in_server_loop and self.config.breakwater_enabled and self.config.ramp_alpha:
+                curr_time = self.state.timer.get_time()
+                if self.config.delay_ramp and curr_time % 1000 == 0:
+                    self.state.breakwater_server.total_credits += self.state.ramp_delay_map[int(curr_time/1000)]
                     self.state.breakwater_server.total_credits = min(self.state.breakwater_server.max_credits,
                                                                      self.state.breakwater_server.total_credits)
-                    self.state.breakwater_server.ramp_alpha_records.append(
-                        [self.state.timer.get_time(), increase,
+                curr_num_queues = len(self.state.available_queues)
+                if curr_num_queues > self.state.prev_queues:
+                    increase = int(self.state.config.PER_CORE_ALPHA_INCREASE * (self.state.breakwater_server.total_credits
+                                                                            / curr_num_queues))
+                    if self.config.delay_ramp:
+                        increase_time = int(curr_time / 1000) + int (self.config.RTT / 1000)
+                        if increase_time < int(self.config.sim_duration / 1000):
+                            self.state.ramp_delay_map[increase_time] += increase
+                    else:
+                        self.state.breakwater_server.total_credits += increase
+                        self.state.breakwater_server.total_credits = min(self.state.breakwater_server.max_credits,
+                                                                     self.state.breakwater_server.total_credits)
+                    self.state.breakwater_server.ramp_alpha_records.append([curr_time, increase,
                          self.state.breakwater_server.total_credits, curr_num_queues - self.state.prev_queues])
                 self.state.prev_queues = curr_num_queues
 
