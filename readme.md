@@ -33,6 +33,43 @@ Example: `python3 run_sim.py config.json -varycores "work stealing static alloca
 
 #### Configuration Parameter Dictionary
 
+##### Breakwater System Parameters
+* `record_core_deallocations`: (bool) Records each time a core deallocates, with timestamps and relevant Breakwater stats included.
+* `record_throughput_over_time`: (bool) Can be used without Breakwater. Records time and throughput.
+* `record_cores_over_time`: (bool) Timestamps and records number of cores and queues. Queues are useful as a measure of when a core is done allocating, in simulations where number of cores equals number of queues.
+* `record_credit_pool`: (bool) Records info about Breakwater credit pool every RTT.
+* `record_breakwater_info`: (bool) Records overall info about Breakwater, including total tasks, drops, and timeouts.
+* `record_drops`: (bool): Records each time a drop occurs, and relevant Breakwater stats.
+* `breakwater_enabled`: (bool) Enables Breakwater.
+* `breakwater_debug_info`: (bool) Timestamps and records some Breakwater info when the number of credits for a client is adjusted.
+* `varyload_over_time`: (bool) Varies the load over time, with a list of loads able to be set in simulation_state.py, as the `loads` variable.
+* `varyload_by_rtt`: (bool) Varies the load every certain number of RTTs (unused currently).
+* `no_drops`: (bool) Prevents tasks from dropping due to AQM.
+* `request_timeout`: (bool) Allows requests to timeout at the client. Calculated as `2*SLO`. `SLO = 10 * (RTT + avg. service time)`
+* `initial_credits`: (bool) Provides initial credits to the server, dependent on RTT and target delay. Calculation can be adjusted in breakwater_server.py
+* `variable_max_credits`: (bool) Adjusts the maximum credits based on the RTT and the target delay. Can adjust in breakwater_server.py.
+* `variable_min_credits`: (bool) Adjusts the minimum credits based on the RTT. Can adjust in breakwater_server.py.
+* `zero_initial_cores`: (bool) Parks all cores at the beginning of the simulation.
+* `extend_work_search`: (bool) Enables the core deallocation fix.
+* `ramp_alpha`: (bool) Enables the dynamic credit pool fix.
+* `delay_ramp`: (bool) If true, delays the ramp up by an RTT, works for both cases of ramp_in_server_loop.
+* `ramp_in_server_loop`: (bool) Switches between the ramp up being applied externally in the simulation whenever a core is allocated, and in the server control loop every RTT.
+
+##### Breakwater Constants
+* `BREAKWATER_GRANULARITY`: (int) Interval size between Breakwater checks for successes and failures per client, in ns.
+* `CLIENT_TIMEOUT`: (int) (deprecated) How long a task takes to timeout in ns. Not used anymore, is now calculated as `2*SLO`. `SLO = 10 * (RTT + avg. service time)`
+* `THROUGHPUT_TIMER`: (int) Interval size for recording throughput, in ns.
+* `MAX_CREDITS`: (int) Max credits for the server. Used if variable_max_credits is false.
+* `MIN_CREDITS`: (int) Min credits for the server. Used if variable_min_credits is false.
+* `SERVER_INITIAL_CREDITS`: (int) Initial credits provided to the server. Used to put the server in a steady state instead of needing to ramp up at the beginning of the simulation. Used if initial_credits is false.
+* `PER_CORE_ALPHA_INCREASE`: (float) A scaling value for how many credits the server increases the credit pool by when the ramp up conditions are met.
+* `RTT`: (int) The RTT in ns.
+* `NUM_CLIENTS`: (int) The number of clients.
+* `BREAKWATER_TARGET_DELAY`: (int) Breakwater's value for target delay in ns.
+* `BREAKWATER_AGGRESSIVENESS_ALPHA`: (float) Controls the scaling of additive increase, only relevant at high number of clients.
+* `BREAKWATER_BETA`: (float) Controls the multiplicative decrease, affects how sharply the credit pool pulls back when facing high delay.
+* `EXTEND_WORK_SEARCH_THRESHOLD`: (float) Controls what fraction of the credit pool must be dropped to trigger the work search extension. 
+
 ##### System Parameters
 * `avg_system_load`: (float) Offered load
 * `num_queues`: (int) Number of queues
@@ -71,6 +108,7 @@ Example: `python3 run_sim.py config.json -varycores "work stealing static alloca
 * `bimodal_service_time`: (bool) If enabled, tasks are generated according to a bimodal distribution rather than an exponential distribution.
 * `join_bounded_shortest_queue`: (bool) Enables the load balancing policy in which tasks join a central queue and individual queues pull to maintain a certain length.
 * `record_queue_lens`: (bool) If enabled, record queue lengths at each reallocation decision.
+* `progress_bar`: (bool) Usually enabled, can disable to prevent lengthy console output if logging. 
 
 ##### Constants
 * `AVERAGE_SERVICE_TIME`: (int) Average service time of tasks in ns.
@@ -109,7 +147,7 @@ Arguments:
 * ignored_time: Percentage of simulation time (as an int) to drop from the beginning of the data.
 
 ## Additional Analysis
-Note that currently breakwater features are currently for a single client, and many portions will break if multiple clients are created. TODO will be added later.
+Note that Breakwater features are currently for a single client, and many portions will break if multiple clients are created. TODO will be added later.
 ### time_series plots
 * Currently designed for parallel runs with varyRTT enabled. Produces plots for each run detailing the credit pool, number of cores, latencies, and throughput.
 * `python3 time_series.py <simulations> <any character>`
@@ -122,6 +160,8 @@ Note that currently breakwater features are currently for a single client, and m
 ### drops_timeouts plot
 * Run in the exact same way as time_series. Produces a png that shows the number of drops that occurred for each parallel run. Use any character as an extra argument to copy the name of an existing csv file.
 * ex. `python3 drops_timeouts.py <simulations> <any character>`
+* Instead of any character, using the option `-outfile` will produce a csv that compiles together the drops and timeouts data across the parallel runs for easier use.
+* ex. `python3 drops_timeouts.py <simulations> -outfile`
 
 ### deallocations_analysis
 * `python3 deallocations_analysis.py <simulations> <window>`
