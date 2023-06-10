@@ -63,6 +63,10 @@ def analyze_sim_run(run_name, arr, plus_minus):
     Data = df[['Time', 'Throughput']]
     throughput_data = np.array(Data)
 
+    # df = pandas.read_csv(throughput_file)
+    # Data = df[['Time', 'Goodput']]
+    # goodput_data = np.array(Data)
+
     df = pandas.read_csv(core_file)
     Data = df[['Time', 'Queues']]
     core_data = np.array(Data)
@@ -108,7 +112,7 @@ def analyze_sim_run(run_name, arr, plus_minus):
         PLOTTING
     """
 
-    fig, (plt1, plt2, plt3, plt4, plt5, plt6, plt7) = plt.subplots(7, 1, figsize=(20,32))
+    fig, (plt1, plt2, plt3, plt4, plt5, plt6, plt7) = plt.subplots(7, 1, figsize=(20,35))
     # TODO this can be something better
     fig.suptitle(run_name, fontsize=22, y=0.90)
     x_range = [0, 100000]
@@ -133,7 +137,7 @@ def analyze_sim_run(run_name, arr, plus_minus):
     plt1.hist(total_arrivals/1000, num_bins, rasterized=rasterize)        
 
     plt1.set_xlabel('Time (us)', fontsize=18)
-    plt1.set_ylabel('# Task Arrivals', fontsize=18)
+    plt1.set_ylabel('Task Arrivals', fontsize=18)
     # plt1.legend(fontsize=18)
 
 
@@ -152,7 +156,7 @@ def analyze_sim_run(run_name, arr, plus_minus):
     plt2.hist(completions/1000, num_bins, rasterized=rasterize)
 
     plt2.set_xlabel('Time (us)', fontsize=18)
-    plt2.set_ylabel('# Task Completions', fontsize=18)
+    plt2.set_ylabel('Task Completions', fontsize=18)
     #plt2.legend(fontsize=18)
 
 
@@ -171,8 +175,8 @@ def analyze_sim_run(run_name, arr, plus_minus):
             
     plt3.plot(total_system_data[:,0]/1000, total_system_data[:,1], rasterized=rasterize)
 
-    plt3.set_xlabel('Arrival Time (microseconds)', fontsize=18)
-    plt3.set_ylabel('# Tasks in System', fontsize=18)
+    plt3.set_xlabel('Time (microseconds)', fontsize=18)
+    plt3.set_ylabel('Tasks in System', fontsize=18)
 
     """
     PLOT 4
@@ -190,7 +194,7 @@ def analyze_sim_run(run_name, arr, plus_minus):
     plt4.scatter(drops_data[:,0]/1000, drops_data[:,1], rasterized=rasterize)
 
     plt4.set_xlabel('Time (microseconds)', fontsize=18)
-    plt4.set_ylabel('# Dropped Credits', fontsize=18)
+    plt4.set_ylabel('Dropped Credits', fontsize=18)
 
 
     """
@@ -207,44 +211,61 @@ def analyze_sim_run(run_name, arr, plus_minus):
             
     plt5.plot(core_data[:,0]/1000, core_data[:,1], rasterized=rasterize)
 
-    plt5.set_xlabel('Arrival Time (us)', fontsize=18)
-    plt5.set_ylabel('number of cores', fontsize=18)
-
-
+    plt5.set_xlabel('Time (microseconds)', fontsize=18)
+    plt5.set_ylabel('Cores', fontsize=18)
     """
-    PLOT 6
+        PLOT 6
     """
     plt6.tick_params(axis='both', which='major', labelsize=18)
 
     plt6.axis(xmin=x_range[0], xmax=x_range[1])
-    #plt6.axis(ymin=0, ymax=28)
+    # plt6.axis(ymin=0, ymax=28)
     plt6.grid(which='major', color='black', linewidth=1.0)
     plt6.grid(which='minor', color='grey', linewidth=0.2)
     plt6.minorticks_on()
     # plt.ylim(ymin=0)
 
-            
-    plt6.plot(throughput_data[:,0]/1000, throughput_data[:,1], rasterized=rasterize)
+    plt6.plot(credits_data[:, 0] / 1000, credits_data[:, 1], rasterized=rasterize)
 
     plt6.set_xlabel('Time (microseconds)', fontsize=18)
-    plt6.set_ylabel('Throughput per second', fontsize=18)
+    plt6.set_ylabel('Credit Pool', fontsize=18)
 
     """
-        PLOT 7
+    PLOT 7
     """
     plt7.tick_params(axis='both', which='major', labelsize=18)
 
     plt7.axis(xmin=x_range[0], xmax=x_range[1])
-    # plt7.axis(ymin=0, ymax=28)
+    #plt7.axis(ymin=0, ymax=28)
     plt7.grid(which='major', color='black', linewidth=1.0)
     plt7.grid(which='minor', color='grey', linewidth=0.2)
     plt7.minorticks_on()
     # plt.ylim(ymin=0)
 
-    plt7.plot(credits_data[:, 0] / 1000, credits_data[:, 1], rasterized=rasterize)
+            
+    plt7.plot(throughput_data[:,0]/1000, throughput_data[:,1], rasterized=rasterize)
 
     plt7.set_xlabel('Time (microseconds)', fontsize=18)
-    plt7.set_ylabel('Credit Pool', fontsize=18)
+    plt7.set_ylabel('Throughput per second', fontsize=18)
+
+    """
+    PLOT 8
+    """
+    # plt8.tick_params(axis='both', which='major', labelsize=18)
+    #
+    # plt8.axis(xmin=x_range[0], xmax=x_range[1])
+    # # plt8.axis(ymin=0, ymax=28)
+    # plt8.grid(which='major', color='black', linewidth=1.0)
+    # plt8.grid(which='minor', color='grey', linewidth=0.2)
+    # plt8.minorticks_on()
+    # # plt.ylim(ymin=0)
+    #
+    # plt8.plot(goodput_data[:, 0] / 1000, goodput_data[:, 1], rasterized=rasterize)
+    #
+    # plt8.set_xlabel('Time (microseconds)', fontsize=18)
+    # plt8.set_ylabel('Goodput per second', fontsize=18)
+
+
 
 
 
@@ -311,7 +332,9 @@ def main():
 
     for sim_name in sim_list:
         # analyze_sim_run(sim_name.strip(), get_xcenters(sim_name.strip(), buffer), plus_minus)
-        centers = [0, 25000, 26000, 27000, 50000, 75000, 100000]
+        # centers = [9500,52000,69000, 70000, 71000, 72000, 73000, 74000, 91000]
+        centers = [0, 25000, 50000, 75000, 100000]
+        # centers = [0, 1000, 2000, 3000, 50000, 100000]
         analyze_sim_run(sim_name.strip(), centers, plus_minus)
         print("Simulation {} analysis complete".format(sim_name))
 

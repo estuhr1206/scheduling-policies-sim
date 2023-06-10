@@ -98,6 +98,7 @@ def main():
             i += 1
     else:
         print("File or directory not found")
+
     new_filename = None
     if len(sys.argv) > 2:
         new_filename = None
@@ -115,7 +116,9 @@ def main():
         breakwater_data_total[i] = (read_files(sim_name.strip()))
         print("Simulation {} analysis complete".format(sim_name))
     analyze_sim_run(breakwater_data_total, new_filename)
-    
+    if "-outfile" in sys.argv:
+        pandas.DataFrame(breakwater_data_total, columns=['Dropped Tasks', 'Timed Out Tasks'], dtype=int).to_csv(new_filename + '_drops.csv')
+
 
 if __name__ == "__main__":
     main()

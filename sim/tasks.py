@@ -76,6 +76,7 @@ class Task:
         # Want to track how many vanilla tasks get completed
         self.state.complete_task_count += 1
         self.state.current_completed_tasks += 1
+
         # breakwater
         if self.config.breakwater_enabled:
             client = self.state.all_clients[self.source_client]
@@ -83,6 +84,9 @@ class Task:
             time_g = int(current_time / self.config.BREAKWATER_GRANULARITY) + int(self.config.RTT / self.config.BREAKWATER_GRANULARITY)
             if time_g < client.total_intervals + 1:
                 client.success_credits_map[time_g] += 1
+            time_diff = current_time - self.original_arrival_time
+            if time_diff <= (client.timeout / 2):
+                self.state.current_slo_completed_tasks += 1
             
 
     def is_zero_duration(self):

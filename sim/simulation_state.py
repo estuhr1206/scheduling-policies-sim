@@ -4,6 +4,7 @@
 import math
 import datetime
 import random
+import numpy as np
 
 from timer import Timer
 from work_search_state import WorkSearchState
@@ -37,7 +38,11 @@ class SimulationState:
 
         self.throughput_records = []
         self.current_completed_tasks = 0
+        self.current_slo_completed_tasks = 0
         self.deallocations_records = []
+        self.prev_queues = 0
+        if config.delay_ramp and not config.ramp_in_server_loop:
+            self.ramp_delay_map = np.zeros((int(self.state.config.sim_duration / 1000) + 1))
 
         # Global stats
         self.overall_steal_count = 0
@@ -51,6 +56,9 @@ class SimulationState:
         self.empty_flags = 0
         self.alloc_to_task_time = 0 # Make this per-task if need anything other than the average
         self.allocations = 0
+
+        self.original_minimum_work_search_time = config.MINIMUM_WORK_SEARCH_TIME
+        self.extend_work_search_records = []
 
         # Stats only known at complete time
         self.tasks_scheduled = 0
@@ -376,7 +384,9 @@ class SimulationState:
         for i in range(len(set(config.mapping))):
             self.queues.append(Queue(i, config, self))
         self.available_queues = list(set(config.mapping))
-
+        # TODO this works only if we are considering 1 queue to 1 thread. adjust ramp alpha to use threads
+        # if this is not the case.
+        self.prev_queues = len(self.available_queues)
         if config.join_bounded_shortest_queue:
             self.main_queue = Queue(-1, config, self)
 
@@ -418,7 +428,7 @@ class SimulationState:
         if config.varyload_over_time:
             interval_list = []
             # loads = [0.2, 0.4, 0.6, 0.8]
-            loads = [1.0, 0.2, 0.5, 1.4]
+            loads = [0.2, 1.2, 0.5, 1.2]
             interval_increment = config.sim_duration / len(loads)
             interval_value = interval_increment
             for temp_i in range(len(loads)):

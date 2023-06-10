@@ -10,7 +10,8 @@ class BreakwaterServer:
         self.RTT = RTT
         self.target_delay = TARGET_DELAY
         if self.state.config.initial_credits:
-            self.total_credits = 25 + int(self.state.config.RTT / 5000) * 150 + int(self.target_delay / 100)
+            # self.total_credits = 25 + int(self.state.config.RTT / 5000) * 150 + int(self.target_delay / 100)
+            self.total_credits = int(self.state.config.RTT / 5000) * 100 + int(self.target_delay / 100)
             # self.credits_issued = 25 + int(self.state.config.RTT / 5000) * 150 + int(self.target_delay / 100)
         else:
             self.total_credits = self.state.config.SERVER_INITIAL_CREDITS
@@ -24,20 +25,43 @@ class BreakwaterServer:
         self.overcommitment_credits = 1
         self.max_delay = 0
 
+        self.ramp_alpha_records = []
+
+        if self.state.config.zero_initial_cores:
+            self.prev_cores = 0
+        else:
+            self.prev_cores = self.state.config.num_threads
+        self.prev_total_queue = 0
+
         self.credit_pool_records = []
-        if self.state.config.initial_credits:
+        if self.state.config.variable_max_credits:
             # TODO 150 is an estimate, should be tested more/calculated better
             self.max_credits = 25 + int(self.state.config.RTT / 5000) * 150 + int(self.target_delay / 100) + 150
         else:
             self.max_credits = MAX_CREDITS
 
+        if self.state.config.variable_min_credits:
+            # TODO didn't see a good pattern in the data yet
+            self.min_credits = max(self.state.config.MIN_CREDITS, int(self.state.config.RTT / 5000) * 25)
+        else:
+            self.min_credits = self.state.config.MIN_CREDITS
+
         # TODO debugging
         self.debug_records = []
+
+        self.next_ramp_alpha = 0
 
     def control_loop(self, max_delay=0):
         self.max_delay = max_delay
         # total credit pool
+        # This only applies for multi client scenarios
         uppercase_alpha = max(int(self.AGGRESSIVENESS_ALPHA * self.num_clients), 1)
+
+        if self.next_ramp_alpha > 0:
+            uppercase_alpha += self.next_ramp_alpha
+            # this forces it to occur or not
+            max_delay = 0
+            self.next_ramp_alpha = 0
 
         if max_delay < self.target_delay:
             self.total_credits += uppercase_alpha
@@ -46,6 +70,7 @@ class BreakwaterServer:
         else:
             reduction = max(1.0 - self.BETA*((max_delay - self.target_delay)/self.target_delay), 0.5)
             self.total_credits = int(self.total_credits * reduction)
+            self.total_credits = max(self.total_credits, self.min_credits)
 
         # TODO debugging on single client, needs to be adjusted to multiple clients
         # TODO Technically not needed, lazy dist would be called on completions
@@ -56,6 +81,43 @@ class BreakwaterServer:
         if self.state.config.record_credit_pool:
             self.credit_pool_records.append([self.state.timer.get_time(), self.total_credits, self.credits_issued,
                                              self.overcommitment_credits])
+
+        if self.state.config.ramp_in_server_loop and self.state.config.ramp_alpha:
+            # should this get reset? Or should it always get used up?
+            # probably shouldn't always get used up? At that point just force it
+            self.next_ramp_alpha = 0
+            num_curr_cores = self.state.config.num_threads - len(self.state.parked_threads)
+            total_queue = self.state.total_queue_occupancy()
+            num_queues = len(self.state.available_queues)
+            # modify this line to use queues instead of threads
+            num_curr_cores = num_queues
+
+            allocated_during_RTT = num_curr_cores - self.prev_cores
+            self.prev_cores = num_curr_cores
+            per_core_increase = self.state.config.PER_CORE_ALPHA_INCREASE * (self.total_credits / num_curr_cores)
+            # per_core_increase = self.state.config.PER_CORE_ALPHA_INCREASE * (
+            #                     (self.state.config.RTT / 1000) + (self.state.config.BREAKWATER_TARGET_DELAY / 1000))
+
+            # trying drops method, similar to extend ws, as a sign that we are seeing a genuine increase in load,
+            # and not just instability
+            total_current_drops = 0
+            for client_id in self.available_client_ids:
+                total_current_drops += self.state.all_clients[client_id].dropped_credits
+            if allocated_during_RTT > 0 and \
+                    (total_current_drops / self.total_credits) >= 0.25* self.state.config.EXTEND_WORK_SEARCH_THRESHOLD:
+            # if allocated_during_RTT > 0 and total_queue >= 3 * self.prev_total_queue:
+            # if allocated_during_RTT > 0:
+                # TODO probably a better calculation approach when number of clients is a factor in alpha
+                self.next_ramp_alpha = int(per_core_increase * allocated_during_RTT)
+                if int(per_core_increase * allocated_during_RTT) < 0:
+                    raise ValueError("error, alpha ramp was below 0, value was: {}".format(
+                                                    int(per_core_increase * allocated_during_RTT)))
+                self.ramp_alpha_records.append([self.state.timer.get_time(), int(per_core_increase*allocated_during_RTT),
+                                                self.total_credits, allocated_during_RTT])
+            self.prev_total_queue = total_queue
+        # increase won't trigger sometimes. Do we want it to always trigger if the ramp conditions are met?
+        # but then again, we're also seeing ramp trigger when it shouldn't under stable low load.
+
 
     def lazy_distribution(self, client_id):
         """

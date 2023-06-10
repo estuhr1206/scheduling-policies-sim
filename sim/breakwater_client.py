@@ -31,6 +31,8 @@ class BreakwaterClient:
         self.drops_record = []
         self.tasks_spent_control_loop = 0
 
+        self.timeout = 2 * int(10 * (self.state.config.RTT + self.state.config.AVERAGE_SERVICE_TIME))
+
         self.dropped_credits = 0
 
         self.id = identifier
@@ -40,6 +42,9 @@ class BreakwaterClient:
         self.total_intervals = int(self.state.config.sim_duration / self.granularity)
         self.dropped_credits_map = np.zeros((self.total_intervals + 1))
         self.success_credits_map = np.zeros((self.total_intervals + 1))
+
+        self.sent_last_us = 0
+        self.pacing_timestamp = 0
 
     def enqueue_task(self, task):
         self.queue.append(task)
@@ -117,15 +122,24 @@ class BreakwaterClient:
         if self.state.config.request_timeout:
             while len(self.queue) > 0:
                 current_task = self.queue[0]
-                if current_task.arrival_time <= self.state.timer.get_time() - self.state.config.CLIENT_TIMEOUT:
+                if current_task.arrival_time <= self.state.timer.get_time() - self.timeout:
                     self.queue.popleft()
-                    # self.current_demand -= 1
+                    self.current_demand -= 1
                     self.timed_out_tasks += 1
                 else:
                     break
 
         self.c_unused = self.window - (self.c_in_use + self.dropped_credits)
         while len(self.queue) > 0 and self.c_unused > 0:
+            if self.state.config.client_pacing and self.state.breakwater_server.total_credits <= 50:
+                if self.state.timer.get_time() > self.pacing_timestamp + 1000:
+                    self.sent_last_us = 0
+                    self.pacing_timestamp = self.state.timer.get_time()
+                # TODO what is a reasonable limit per us. 32 at high load, however low credits and low core
+                # situations probably needs less.
+                if self.sent_last_us >= self.state.config.PACING_CREDITS_PER_US:
+                    break
+                self.sent_last_us += 1
             if from_server:
                 self.tasks_spent_control_loop += 1
             self.spend_credits()

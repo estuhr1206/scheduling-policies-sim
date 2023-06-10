@@ -50,6 +50,7 @@ class Simulation:
 
         allocation_number = 0
         reschedule_required = False
+        next_reset_work_search_time = 0
 
         if self.config.progress_bar:
             print("\nSimulation started")
@@ -84,23 +85,68 @@ class Simulation:
                 task_number += 1
 
             # breakwater
+            # time jumps shouldn't skip this, a core "finishes" an allocation task
+            if not self.config.ramp_in_server_loop and self.config.breakwater_enabled and self.config.ramp_alpha:
+                curr_time = self.state.timer.get_time()
+                if self.config.delay_ramp and curr_time % 1000 == 0:
+                    self.state.breakwater_server.total_credits += self.state.ramp_delay_map[int(curr_time/1000)]
+                    self.state.breakwater_server.total_credits = min(self.state.breakwater_server.max_credits,
+                                                                     self.state.breakwater_server.total_credits)
+                curr_num_queues = len(self.state.available_queues)
+                if curr_num_queues > self.state.prev_queues:
+                    increase = int(self.state.config.PER_CORE_ALPHA_INCREASE * (self.state.breakwater_server.total_credits
+                                                                            / curr_num_queues))
+                    if self.config.delay_ramp:
+                        increase_time = int(curr_time / 1000) + int (self.config.RTT / 1000)
+                        if increase_time < int(self.config.sim_duration / 1000):
+                            self.state.ramp_delay_map[increase_time] += increase
+                    else:
+                        self.state.breakwater_server.total_credits += increase
+                        self.state.breakwater_server.total_credits = min(self.state.breakwater_server.max_credits,
+                                                                     self.state.breakwater_server.total_credits)
+                    self.state.breakwater_server.ramp_alpha_records.append([curr_time, increase,
+                         self.state.breakwater_server.total_credits, curr_num_queues - self.state.prev_queues])
+                self.state.prev_queues = curr_num_queues
+
             # server control loop
             if self.config.breakwater_enabled and self.state.timer.get_time() % self.config.RTT == 0:
                 max_delay = self.state.max_queue_delay()[0]
                 self.state.breakwater_server.control_loop(max_delay)
             # restore dropped
             if self.config.breakwater_enabled and self.state.timer.get_time() % self.config.BREAKWATER_GRANULARITY == 0:
+                total_current_drops = 0
+                current_time = self.state.timer.get_time()
                 for client_id in self.state.breakwater_server.available_client_ids:
                     any_successes = self.state.all_clients[client_id].check_successes()
                     any_drops = self.state.all_clients[client_id].restore_dropped_credits()
-                    if any_successes or any_drops or self.state.timer.get_time() % self.config.RTT == 0:
+                    # count drops here, or after lazy dist (where client control loop runs)?
+                    if any_successes or any_drops or current_time % self.config.RTT == 0:
                         # if any response, also redistribute credits
                         self.state.breakwater_server.lazy_distribution(client_id)
+                    total_current_drops += self.state.all_clients[client_id].dropped_credits
+                    if self.config.client_pacing:
+                        # TODO just making sure client always runs if it's being paced
+                        # be careful, under high load client could get called 30 times a microsecond.
+                        # should probably pace using the time
+                        self.state.all_clients[client_id].client_control_loop()
+                if self.config.extend_work_search:
+                    if current_time > next_reset_work_search_time:
+                        next_reset_work_search_time = 0
+                        self.config.MINIMUM_WORK_SEARCH_TIME = self.state.original_minimum_work_search_time
+                        if ((total_current_drops / self.state.breakwater_server.total_credits)
+                             >= self.config.EXTEND_WORK_SEARCH_THRESHOLD):
+                            self.config.MINIMUM_WORK_SEARCH_TIME = self.config.RTT + 5000
+                            next_reset_work_search_time = current_time + self.config.RTT
+                            self.state.extend_work_search_records.append([current_time, total_current_drops])
 
             if self.config.record_throughput_over_time and self.state.timer.get_time() % self.config.THROUGHPUT_TIMER == 0:
+                # adding in goodput, tasks that met SLO
+
                 current_throughput = (self.state.current_completed_tasks / self.config.THROUGHPUT_TIMER) * 10**9
-                self.state.throughput_records.append([self.state.timer.get_time(), current_throughput])
+                current_goodput = (self.state.current_slo_completed_tasks / self.config.THROUGHPUT_TIMER) * 10**9
+                self.state.throughput_records.append([self.state.timer.get_time(), current_throughput, current_goodput])
                 self.state.current_completed_tasks = 0
+                self.state.current_slo_completed_tasks = 0
 
             # Reallocations
             # Continuously check for reallocations
@@ -569,7 +615,7 @@ class Simulation:
         
         if self.config.record_throughput_over_time:
             throughput_over_time_file = open("{}throughput_over_time.csv".format(new_dir_name), "w")
-            throughput_over_time_file.write("Time,Throughput\n")
+            throughput_over_time_file.write("Time,Throughput,Goodput\n")
             for record in self.state.throughput_records:
                 throughput_over_time_file.write(",".join([str(x) for x in record]) + "\n")
             throughput_over_time_file.close()
@@ -577,10 +623,12 @@ class Simulation:
         # breakwater enabled only
         if self.config.record_breakwater_info:
             breakwater_info_file = open("{}breakwater_info.csv".format(new_dir_name), "w")
-            breakwater_info_file.write("ID,Total Tasks,Dropped Tasks,Immediate Tasks,Timed Out Tasks\n")
+            breakwater_info_file.write("ID,Total Tasks,Dropped Tasks,Immediate Tasks,Timed Out Tasks,Timeout Threshold\n")
+            # TODO change for multiple clients
             for client in self.state.all_clients:
-                breakwater_info_file.write("{},{},{},{},{}\n".format(client.id, client.total_tasks, client.dropped_tasks,
-                                                               client.tasks_spent_control_loop, client.timed_out_tasks))
+                breakwater_info_file.write("{},{},{},{},{},{}\n".format(client.id, client.total_tasks, client.dropped_tasks,
+                                                               client.tasks_spent_control_loop, client.timed_out_tasks,
+                                                                int(client.timeout/1000)))
             breakwater_info_file.close()
 
         if self.config.record_credit_pool:
@@ -589,6 +637,19 @@ class Simulation:
             for record in self.state.breakwater_server.credit_pool_records:
                 credit_pool_file.write(",".join([str(x) for x in record]) + "\n")
             credit_pool_file.close()
+        if self.config.extend_work_search:
+            extend_work_search_file = open("{}extend_work_search.csv".format(new_dir_name), "w")
+            extend_work_search_file.write("Time,Dropped Credits\n")
+            for record in self.state.extend_work_search_records:
+                extend_work_search_file.write(",".join([str(x) for x in record]) + "\n")
+            extend_work_search_file.close()
+
+        if self.config.ramp_alpha:
+            ramp_alpha_file = open("{}ramp_alpha.csv".format(new_dir_name), "w")
+            ramp_alpha_file.write("Time,Alpha,Total Credits,#Allocated Cores\n")
+            for record in self.state.breakwater_server.ramp_alpha_records:
+                ramp_alpha_file.write(",".join([str(x) for x in record]) + "\n")
+            ramp_alpha_file.close()
         # TODO good way to record this for multiple clients?
         if self.config.record_drops:
             drops_record_file = open("{}drops_record.csv".format(new_dir_name), "w")
