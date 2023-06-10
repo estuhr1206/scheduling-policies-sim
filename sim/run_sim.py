@@ -29,7 +29,7 @@ class SimProcess(multiprocessing.Process):
 if __name__ == "__main__":
     time = datetime.now().strftime("%y-%m-%d_%H:%M:%S")
 
-    loads = list(range(50, 160, 10))
+    loads = list(range(50, 150, 10))
     threads = []
     cores = None
     targets = None
@@ -131,7 +131,7 @@ if __name__ == "__main__":
                 if cfg.reallocation_replay:
                     name_parts = cfg.reallocation_record.split("_", 1)
                     cfg.reallocation_record = MULTI_THREAD_SIM_NAME_FORMAT.format(name_parts[0], name_parts[1], i)
-                cfg.RTT = RTT
+                #cfg.RTT = RTT
                 cfg.name = name
                 cfg.progress_bar = (i == 0) and cfg.progress_bar
                 cfg.description = description
@@ -169,7 +169,7 @@ if __name__ == "__main__":
                 if cfg.reallocation_replay:
                     name_parts = cfg.reallocation_record.split("_", 1)
                     cfg.reallocation_record = MULTI_THREAD_SIM_NAME_FORMAT.format(name_parts[0], name_parts[1], i)
-                cfg.avg_system_load = load / 100
+                # cfg.avg_system_load = load / 100
                 cfg.name = name
                 cfg.progress_bar = (i == 0) and cfg.progress_bar
                 cfg.description = description

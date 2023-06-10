@@ -10,7 +10,8 @@ class BreakwaterServer:
         self.RTT = RTT
         self.target_delay = TARGET_DELAY
         if self.state.config.initial_credits:
-            self.total_credits = 25 + int(self.state.config.RTT / 5000) * 150 + int(self.target_delay / 100)
+            # self.total_credits = 25 + int(self.state.config.RTT / 5000) * 150 + int(self.target_delay / 100)
+            self.total_credits = int(self.state.config.RTT / 5000) * 100 + int(self.target_delay / 100)
             # self.credits_issued = 25 + int(self.state.config.RTT / 5000) * 150 + int(self.target_delay / 100)
         else:
             self.total_credits = self.state.config.SERVER_INITIAL_CREDITS
@@ -41,7 +42,7 @@ class BreakwaterServer:
 
         if self.state.config.variable_min_credits:
             # TODO didn't see a good pattern in the data yet
-            self.min_credits = max(self.state.config.MIN_CREDITS, int(self.state.config.RTT / 5000) * 19)
+            self.min_credits = max(self.state.config.MIN_CREDITS, int(self.state.config.RTT / 5000) * 25)
         else:
             self.min_credits = self.state.config.MIN_CREDITS
 
@@ -59,7 +60,7 @@ class BreakwaterServer:
         if self.next_ramp_alpha > 0:
             uppercase_alpha += self.next_ramp_alpha
             # this forces it to occur or not
-            # max_delay = 0
+            max_delay = 0
             self.next_ramp_alpha = 0
 
         if max_delay < self.target_delay:
@@ -88,6 +89,7 @@ class BreakwaterServer:
             num_curr_cores = self.state.config.num_threads - len(self.state.parked_threads)
             total_queue = self.state.total_queue_occupancy()
             num_queues = len(self.state.available_queues)
+            # modify this line to use queues instead of threads
             num_curr_cores = num_queues
 
             allocated_during_RTT = num_curr_cores - self.prev_cores
@@ -101,10 +103,10 @@ class BreakwaterServer:
             total_current_drops = 0
             for client_id in self.available_client_ids:
                 total_current_drops += self.state.all_clients[client_id].dropped_credits
-            # if allocated_during_RTT > 0 and \
-            #         (total_current_drops / self.total_credits) >= self.state.config.EXTEND_WORK_SEARCH_THRESHOLD:
+            if allocated_during_RTT > 0 and \
+                    (total_current_drops / self.total_credits) >= 0.25* self.state.config.EXTEND_WORK_SEARCH_THRESHOLD:
             # if allocated_during_RTT > 0 and total_queue >= 3 * self.prev_total_queue:
-            if allocated_during_RTT > 0:
+            # if allocated_during_RTT > 0:
                 # TODO probably a better calculation approach when number of clients is a factor in alpha
                 self.next_ramp_alpha = int(per_core_increase * allocated_during_RTT)
                 if int(per_core_increase * allocated_during_RTT) < 0:

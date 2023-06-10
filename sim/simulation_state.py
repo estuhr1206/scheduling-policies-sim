@@ -428,7 +428,7 @@ class SimulationState:
         if config.varyload_over_time:
             interval_list = []
             # loads = [0.2, 0.4, 0.6, 0.8]
-            loads = [1.0, 0.2, 0.5, 1.4]
+            loads = [0.2, 1.2, 0.5, 1.2]
             interval_increment = config.sim_duration / len(loads)
             interval_value = interval_increment
             for temp_i in range(len(loads)):

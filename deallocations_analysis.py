@@ -332,7 +332,9 @@ def main():
 
     for sim_name in sim_list:
         # analyze_sim_run(sim_name.strip(), get_xcenters(sim_name.strip(), buffer), plus_minus)
-        centers = [0, 25000, 26000, 27000, 50000, 75000, 100000]
+        # centers = [9500,52000,69000, 70000, 71000, 72000, 73000, 74000, 91000]
+        centers = [0, 25000, 50000, 75000, 100000]
+        # centers = [0, 1000, 2000, 3000, 50000, 100000]
         analyze_sim_run(sim_name.strip(), centers, plus_minus)
         print("Simulation {} analysis complete".format(sim_name))
 
