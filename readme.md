@@ -21,9 +21,11 @@ Flags: `-d` for debug output to standard out.
 
 `-varycores`: Vary the number of cores in each simulation rather than varying the load.
 
-`-varyRTT`: Runs with the same number of cores and load, but across different values for RTT. Intended for breakwater.
+`-varyRTT`: Runs with the same number of cores and load, but across different values for RTT. Intended for Breakwater.
 
 `-varytarget`: Runs with same number of cores and load, but across different values for Breakwater's target delay.
+
+`-varycredits`: Runs with same number of cores and load, but across different values for Breakwater's initial credits. Intended for use when the initial credits system variable is false, as this will override the values. 
 
 `description`: String to describe the simulation group. This will be written in `results/meta_log`
 
@@ -167,7 +169,7 @@ Note that Breakwater features are currently for a single client, and many portio
 * `python3 deallocations_analysis.py <simulations> <window>`
 * Produces a pdf of plots for each thread of a parallel run. It details arrivals, completions, tasks in system queues, dropped credits, number of available cores/queues (intended for simulations with 1 core <=> 1 queue), and throughput. 
 * window is an integer that details how many microseconds around core deallocations to plot. For example, if a series of core drops starts at 1000 us, then the plot will have an xrange of (500, 1500). 
-* The number of bins for the histograms of arrivals and completions can be adjusted, and heavily impacts the runtime of this script. Currently set to 100,000 to yield one bin per microsecond.
+* The number of bins for the histograms of arrivals and completions can be adjusted, and heavily impacts the runtime of this script. Currently set to 10,000 to yield one bin per microsecond.
 
 
 ## To Delete Old Results
